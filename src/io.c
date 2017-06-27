@@ -1896,9 +1896,9 @@ int Read_One_Line_Seq(align ***data, int num_otu, FILE *in)
 
       if(c == '.')
         {
-          c = 'N'; // bowhan: allow . in the first sequence (for MUSCLE), but with N, it won't cause any false positive for CRISPR design 
-          // c = (*data)[0]->state[(*data)[num_otu]->len];
-          // if(!num_otu)
+          c = (*data)[0]->state[(*data)[num_otu]->len];
+          if(!num_otu)
+            c = 'N'; // bowhan: allow . in the first sequence (for MUSCLE), but with N, it won't cause any false positive for CRISPR design 
             // Warn_And_Exit("\n== Err: Symbol \".\" should not appear in the first sequence\n");
         }
       (*data)[num_otu]->state[(*data)[num_otu]->len]=c;
