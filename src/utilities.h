@@ -29,7 +29,7 @@ the GNU public licence. See http://www.opensource.org for details.
 #include <assert.h>
 #include <stdbool.h>
 /* #include <malloc/malloc.h> */
-#include <malloc.h>
+/* #include <malloc.h> */
 
 #if (defined(__AVX__))
 #include <xmmintrin.h>
@@ -718,9 +718,10 @@ typedef struct __Tree{
   int                                  n_swap; /*! number of NNIs performed */
   int                               n_pattern; /*! number of distinct site patterns */
   int                      has_branch_lengths; /*! =1 iff input tree displays branch lengths */
-  int                          print_boot_val; /*! if print_boot_val=1, the bootstrap values are printed */
-  int                          print_alrt_val; /*! if print_boot_val=1, the aLRT values are printed */
-  int                              both_sides; /*! both_sides=1 -> a pre-order and a post-order tree
+  short int                    print_boot_val; /*! if print_boot_val=1, the bootstrap values are printed */
+  short int                    print_alrt_val; /*! if print_boot_val=1, the aLRT values are printed */
+  short int                    print_node_num; /*! print node numbers if print_node_num=1 */
+  short int                        both_sides; /*! both_sides=1 -> a pre-order and a post-order tree
                           traversals are required to compute the likelihood
                           of every subtree in the phylogeny*/
   int               num_curr_branch_available; /*!gives the number of the next cell in a_edges that is free to receive a pointer to a branch */
@@ -1130,7 +1131,9 @@ typedef struct __Option { /*! mostly used in 'help.c' */
   struct __List_Tree       *treelist; /*! list of trees. */
   struct __Option              *next;
   struct __Option              *prev;
-
+  struct __Tmcmc               *mcmc;
+  struct __T_Rate             *rates;
+  
   int                    interleaved; /*! interleaved or sequential sequence file format ? */
   int                        in_tree; /*! =1 iff a user input tree is used as input */
 
@@ -1237,8 +1240,6 @@ typedef struct __Option { /*! mostly used in 'help.c' */
 
   int                    mem_question;
   int                do_alias_subpatt;
-  struct __Tmcmc                *mcmc;
-  struct __T_Rate              *rates;
   
 #ifdef BEAGLE
   int                 beagle_resource;
@@ -1556,8 +1557,6 @@ typedef struct __T_Rate {
   phydbl *cur_gamma_prior_mean;
   phydbl *cur_gamma_prior_var;
 
-  int model_log_rates;
-
   short int nd_t_recorded;
   short int br_r_recorded;
 
@@ -1654,6 +1653,7 @@ typedef struct __Tmcmc {
   int num_move_phyrex_disk_multi;
   int num_move_phyrex_ldsk_given_disk;
   int num_move_phyrex_disk_given_ldsk;
+  int num_move_clade_change;
 
   int nd_t_digits;
   int *monitor;
@@ -1777,20 +1777,32 @@ typedef struct __XML_attr {
 /*!********************************************************/
 
 typedef struct __Calibration {
-  struct __Node *target_nd; // The node this calibration applies to
   struct __Calibration *next; // Next calibration
   struct __Calibration *prev; // Previous calibration
+  struct __Clade **clade_list;
 
+  phydbl *alpha_proba_list; // list of alpha proba, one for each clade in clade_list
+
+  int current_clade_idx; // index of the clade the calibration time interval currently applies to
+  int clade_list_size;
+  
   phydbl lower; // lower bound
   phydbl upper; // upper bound
 
-  short int is_primary; // Is is a primary or secondary calibration interval?
-  
-  struct __Node **target_tip; // Array of targeted tips
-  char **target_tax;
-  int  n_target_tax;
-  char *clade_id;
+  short int is_primary; // Is it a primary or secondary calibration interval?
+
+  char *id; // calibration ID
 }t_cal;
+
+/*!********************************************************/
+
+typedef struct __Clade{
+  char *id;
+  struct __Node **tip_list; // list of tips defining the clade
+  char **tax_list; // list of names of tips defining the clade
+  int  n_tax; // number of taxa in the clade
+  struct __Node *target_nd; // The node this calibration applies to
+}t_clad;
 
 /*!********************************************************/
 
@@ -2176,6 +2188,7 @@ void Init_Vect_Dbl(int len,vect_dbl *p);
 void Init_Vect_Int(int len,vect_int *p);
 char *To_Lower_String(char *in);
 phydbl String_To_Dbl(char *string);
+int String_To_Int(char *string);
 char *To_Upper_String(char *in);
 void Connect_CSeqs_To_Nodes(calign *cdata, option *io, t_tree *tree);
 void Switch_Eigen(int state, t_mod *mod);
@@ -2233,6 +2246,8 @@ void Random_Walk_Along_Tree_On_Radius(t_node *a, t_node *d, t_edge *b, phydbl *r
 void Table_Top(unsigned int width);
 void Table_Row(unsigned int width);
 void Table_Bottom(unsigned int width);
+t_cal *Duplicate_Calib(t_cal *from);
+t_clad *Duplicate_Clade(t_clad *from);
 
 
 #include "xml.h"

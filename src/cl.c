@@ -29,7 +29,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
   PhyML_Printf("\n");
   writemode = WRITE;
 
-  if(argc == 1) Exit("\n== No argument was passed to the program. Please check the documentation. \n");
+  if(argc == 1) Exit("\n. No argument was passed to the program. Please check the documentation. \n");
   PhyML_Printf("",writemode);
   
   struct option longopts[] =
@@ -709,7 +709,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
 	  {
 	    io->mod->s_opt->random_input_tree = 1;
 	    io->mod->s_opt->n_rand_starts = atoi(optarg);
-	    if(io->mod->s_opt->n_rand_starts < 1) Exit("\n== Number of random starting trees must be > 0.\n\n");
+	    if(io->mod->s_opt->n_rand_starts < 1) Exit("\n. Number of random starting trees must be > 0.\n\n");
 	  }
 	case 's':case 6:
 	  {
@@ -1046,7 +1046,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
 		  io->mod->s_opt->opt_state_freq = YES;
 		else
 		  {
-		    PhyML_Printf("\n== Please define the data type (nt or aa) before setting the -f option\n");
+		    PhyML_Printf("\n. Please define the data type (nt or aa) before setting the -f option\n");
 		    Exit("\n");
 		  }
 	      }
@@ -1058,7 +1058,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
 		  io->mod->s_opt->opt_state_freq = NO;
 		else
 		  {
-		    PhyML_Printf("\n== Please define the data type (nt or aa) before setting the -f option\n");
+		    PhyML_Printf("\n. Please define the data type (nt or aa) before setting the -f option\n");
 		    Exit("\n");
 		  }
 	      }
@@ -1100,7 +1100,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
 		   io->mod->e_frq->user_b_freq->v[2] > 1. ||
 		   io->mod->e_frq->user_b_freq->v[3] > 1.)
 		  {
-		    Warn_And_Exit("\n== Invalid base frequencies.\n");
+		    Warn_And_Exit("\n. Invalid base frequencies.\n");
 		  }
 	      }
 	    break;
@@ -1404,22 +1404,22 @@ int Read_Command_Line(option *io, int argc, char **argv)
      (io->mod->s_opt->topo_search == NNI_MOVE) && 
      (io->mod->s_opt->random_input_tree))
     {
-      Warn_And_Exit("\n== The random starting tree option is only compatible with SPR based search options.\n"); 
+      Warn_And_Exit("\n. The random starting tree option is only compatible with SPR based search options.\n"); 
     }
   
   if ((io->datatype == NT) && (io->mod->whichmodel > 10))
     {
       char choix;
-      PhyML_Printf("\n== Err.: model incompatible with the data type. Please use JC69, K80, F81, HKY, F84, TN93 or GTR\n");
-      PhyML_Printf("\n== Type any key to exit.\n");
+      PhyML_Printf("\n. Err.: model incompatible with the data type. Please use JC69, K80, F81, HKY, F84, TN93 or GTR\n");
+      PhyML_Printf("\n. Type any key to exit.\n");
       if(!scanf("%c",&choix)) Exit("\n");
       Warn_And_Exit("\n");
     }
   else if ((io->datatype == AA) && (io->mod->whichmodel < 11))
     {
       char choix;
-      PhyML_Printf("\n== Err.: model incompatible with the data type. Please use LG, Dayhoff, JTT, MtREV, WAG, DCMut, RtREV, CpREV, VT, Blosum62, MtMam, MtArt, HIVw, HIVb or AB.\n");
-      PhyML_Printf("\n== Type any key to exit.\n");
+      PhyML_Printf("\n. Err.: model incompatible with the data type. Please use LG, Dayhoff, JTT, MtREV, WAG, DCMut, RtREV, CpREV, VT, Blosum62, MtMam, MtArt, HIVw, HIVb or AB.\n");
+      PhyML_Printf("\n. Type any key to exit.\n");
       if(!scanf("%c",&choix)) Exit("\n");
       Exit("\n");
     }
@@ -1513,7 +1513,7 @@ int Read_Command_Line(option *io, int argc, char **argv)
   
   if(io->datatype == AA && io->mod->whichmodel == CUSTOMAA && !io->mod->fp_aa_rate_mat)
     {
-      PhyML_Printf("\n== Custom model option with amino-acid requires you to specify a rate matrix file through the '--aa_rate_file' option.\n");
+      PhyML_Printf("\n. Custom model option with amino-acid requires you to specify a rate matrix file through the '--aa_rate_file' option.\n");
       Exit("\n");
     }
   

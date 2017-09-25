@@ -38,8 +38,8 @@ void Optimize_Single_Param_Generic(t_tree *tree, phydbl *param, phydbl lim_inf, 
 
   if(tree->c_lnL < lk_init - tree->mod->s_opt->min_diff_lk_global)
     {
-      PhyML_Printf("\n== %.10f < %.10f --> diff=%.10f param value = %f\n",tree->c_lnL,lk_init,tree->c_lnL-lk_init,*param);
-      Exit("\n== Optimisation failed !\n");
+      PhyML_Fprintf(stderr,"\n. %.10f < %.10f --> diff=%.10f param value = %f\n",tree->c_lnL,lk_init,tree->c_lnL-lk_init,*param);
+      Exit("\n. Optimisation failed !\n");
     }
 }
 
@@ -308,7 +308,7 @@ phydbl Generic_Brent(phydbl ax, phydbl bx, phydbl cx, phydbl tol,
       Lk(NULL,tree);
       if(tree->c_lnL < init_lnL - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
           Warn_And_Exit("");
         }
       return tree->c_lnL;
@@ -654,9 +654,9 @@ phydbl Br_Len_Brent(t_edge *b, t_tree *tree)
   
   if(lk_end < lk_begin - tree->mod->s_opt->min_diff_lk_local)
     {
-      PhyML_Printf("\n== l: %f var:%f",b->l->v,b->l_var->v);
-      PhyML_Printf("\n== lk_beg = %f lk_end = %f",lk_begin, lk_end);
-      PhyML_Printf("\n== Err. in file %s at line %d",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. l: %f var:%f",b->l->v,b->l_var->v);
+      PhyML_Fprintf(stderr,"\n. lk_beg = %f lk_end = %f",lk_begin, lk_end);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -676,6 +676,7 @@ void Round_Optimize(t_tree *tree, int n_round_max)
   n_round = 0;
   each = 0;
 
+  
   while(n_round < n_round_max)
     {      
       if(tree->mod->s_opt->opt_bl || tree->mod->s_opt->constrained_br_len) Optimize_Br_Len_Serie(tree);
@@ -684,7 +685,6 @@ void Round_Optimize(t_tree *tree, int n_round_max)
          (tree->verbose > VL2) &&
          (tree->io->quiet == NO)) Print_Lk(tree,"[Branch lengths     ]");
 
-      /* printf("\n. [%d] %f ",n_round,tree->c_lnL); fflush(NULL); */
       
       if(!each)
         {
@@ -693,16 +693,17 @@ void Round_Optimize(t_tree *tree, int n_round_max)
         }
 
       lk_new = tree->c_lnL;
+      /* printf("\n. [%d] new:%f old:%f each:%d",n_round,lk_new,lk_old,each); fflush(NULL); */
+
       if(lk_new < lk_old - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== lk_new = %f lk_old = %f diff = %f",lk_new,lk_old,lk_new-lk_old);
-          Exit("\n== Optimisation failed ! (Round_Optimize)\n");
+          PhyML_Fprintf(stderr,"\n. lk_new = %f lk_old = %f diff = %f",lk_new,lk_old,lk_new-lk_old);
+          Exit("\n. Optimisation failed ! (Round_Optimize)\n");
         }
-      if(FABS(lk_new - lk_old) < tree->mod->s_opt->min_diff_lk_local) break;
-      else 
-        {
-          lk_old  = lk_new;
-        }
+      
+      if((FABS(lk_new - lk_old) < tree->mod->s_opt->min_diff_lk_local) && (each == 3)) break;
+      lk_old  = lk_new;
+
       n_round++;
       each--;
     }
@@ -735,8 +736,8 @@ void Optimize_Br_Len_Serie(t_tree *tree)
 
       if(tree->c_lnL < lk_init - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== %f -- %f",lk_init,tree->c_lnL);
-          PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+          PhyML_Printf("\n. %f -- %f",lk_init,tree->c_lnL);
+          PhyML_Printf("\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
         }
 
       if((tree->io->quiet)?(0):(tree->verbose > VL2))
@@ -773,7 +774,7 @@ void Optimize_Br_Len_Serie(t_tree *tree)
 
   if(lk_end < lk_init - tree->mod->s_opt->min_diff_lk_local)
     {
-      PhyML_Printf("\n== lk_init: %f lk_end: %f",lk_init,lk_end);
+      PhyML_Fprintf(stderr,"\n. lk_init: %f lk_end: %f",lk_init,lk_end);
       Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
     }
 }
@@ -802,7 +803,7 @@ void Optimize_Br_Len_Multiplier(t_tree *mixt_tree, int verbose)
 
           if(Get_Lk(tree) < lk_init - tree->mod->s_opt->min_diff_lk_local)
             {
-              PhyML_Printf("\n== %f -- %f",lk_init,tree->c_lnL);
+              PhyML_Fprintf(stderr,"\n. %f -- %f",lk_init,tree->c_lnL);
               Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
             }
         }
@@ -846,7 +847,7 @@ void Optimize_Br_Len_Serie_Post(t_node *a, t_node *d, t_edge *b_fcus, t_tree *tr
 
       if(tree->c_lnL < lk_init - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== %f -- %f",lk_init,tree->c_lnL);
+          PhyML_Fprintf(stderr,"\n. %f -- %f",lk_init,tree->c_lnL);
           Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
         }
 
@@ -857,9 +858,9 @@ void Optimize_Br_Len_Serie_Post(t_node *a, t_node *d, t_edge *b_fcus, t_tree *tr
 
   if(tree->c_lnL < lk_init - tree->mod->s_opt->min_diff_lk_local)
     {
-      PhyML_Printf("\n== %f -- %f",lk_init,tree->c_lnL);
-      PhyML_Printf("\n== Edge: %d",b_fcus->num);
-      PhyML_Printf("\n== is_mixt_tree: %d",tree->is_mixt_tree);
+      PhyML_Fprintf(stderr,"\n. %f -- %f",lk_init,tree->c_lnL);
+      PhyML_Fprintf(stderr,"\n. Edge: %d",b_fcus->num);
+      PhyML_Fprintf(stderr,"\n. is_mixt_tree: %d",tree->is_mixt_tree);
       Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
     }
 
@@ -990,6 +991,8 @@ void Optimiz_All_Free_Param(t_tree *tree, int verbose)
   Optimize_Efrq_Weights(tree,verbose);
   Optimize_Free_Rate(tree,verbose);
   Optimize_Br_Len_Multiplier(tree,verbose);
+
+  if(tree->io->print_json_trace == YES) JSON_Tree_Io(tree,tree->io->fp_out_json_trace); 
 
   if(tree->mod->use_m4mod)
     {
@@ -2320,7 +2323,7 @@ static phydbl Br_Len_Newton_Raphson(phydbl *l, t_edge *b, int n_iter_max, phydbl
   
       if(isnan(*l) == TRUE)
         {
-          PhyML_Printf("\n\n== dl=%f d2l:%f",dl,d2l);
+          PhyML_Printf("\n\n. dl=%f d2l:%f",dl,d2l);
           assert(FALSE);
         }
       
@@ -2475,7 +2478,7 @@ phydbl Generic_Brent_Lk(phydbl *param, phydbl ax, phydbl cx, phydbl tol,
         }
     }
 
-  Exit("\n== Too many iterations in Generic_Brent_Lk !");
+  Exit("\n. Too many iterations in Generic_Brent_Lk !");
   return(-1);
   /* Not Reached ??  *param=x;   */
   /* Not Reached ??  return fx; */
@@ -2581,7 +2584,7 @@ void Opt_Node_Heights_Recurr_Pre(t_node *a, t_node *d, t_tree *tree)
 
       if(t_min > t_max)
         {
-          PhyML_Printf("\n== Err in file %s at line %d\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
           Exit("\n");
         }
 
@@ -2889,8 +2892,8 @@ void Optimize_Free_Rate(t_tree *mixt_tree, int verbose)
 
               if(lk_after < lk_before - tree->mod->s_opt->min_diff_lk_global)
                 {
-                  PhyML_Printf("\n== lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
-                  PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+                  PhyML_Fprintf(stderr,"\n. lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
+                  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
                   Exit("");
                 }
             }
@@ -2930,8 +2933,8 @@ void Optimize_Free_Rate(t_tree *mixt_tree, int verbose)
 
               if(lk_after < lk_before - tree->mod->s_opt->min_diff_lk_global)
                 {
-                  PhyML_Printf("\n== lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
-                  PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+                  PhyML_Fprintf(stderr,"\n. lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
+                  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
                   Exit("");
                 }
 
@@ -2998,8 +3001,8 @@ void Optimize_Free_Rate_Rr(t_tree *tree, int fast, int verbose)
 
           if(lk_after < lk_before - tree->mod->s_opt->min_diff_lk_global)
             {
-              PhyML_Printf("\n== lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
-              PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+              PhyML_Fprintf(stderr,"\n. lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
+              PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
               Exit("");
             }
         }
@@ -3042,8 +3045,8 @@ void Optimize_Free_Rate_Rr(t_tree *tree, int fast, int verbose)
 
   if(lk_after < lk_before - tree->mod->s_opt->min_diff_lk_global)
     {
-      PhyML_Printf("\n== lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Exit("");
     }
 
@@ -3129,8 +3132,8 @@ void Optimize_Free_Rate_Weights(t_tree *tree, int fast, int verbose)
 
   if(lk_after < lk_before - tree->mod->s_opt->min_diff_lk_global)
     {
-      PhyML_Printf("\n== lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. lk_before: %f lk_after: %f diff: %G",lk_before,lk_after,lk_before-lk_after);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Exit("");
     }
 
@@ -3171,14 +3174,16 @@ void Optimize_State_Freqs(t_tree *mixt_tree, int verbose)
             {
               failed = YES;
 
+
               BFGS(mixt_tree,tree->mod->e_frq->pi_unscaled->v,tree->mod->ns,1.e-5,tree->mod->s_opt->min_diff_lk_local,1.e-5,NO,YES,
                    &Return_Abs_Lk,
                    &Num_Derivative_Several_Param,
                    &Lnsrch,&failed);
               
+
               if(failed == YES)
                 {
-                  for(i=0;i<tree->mod->ns;i++)
+                  for(i=0;i<tree->mod->ns;++i)
                     {
                       phydbl a,c;
                       

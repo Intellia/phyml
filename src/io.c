@@ -134,7 +134,7 @@ void R_rtree(char *s_tree_a, char *s_tree_d, t_node *a, t_tree *tree, int *n_int
 
   if(strstr(s_tree_a," "))
     {
-      PhyML_Printf("\n== [%s]",s_tree_a);
+      PhyML_Fprintf(stderr,"\n. [%s]",s_tree_a);
       Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
     }
 
@@ -148,8 +148,8 @@ void R_rtree(char *s_tree_a, char *s_tree_d, t_node *a, t_tree *tree, int *n_int
 
       if((*n_int + n_otu) == (2*n_otu-1))
         {
-          PhyML_Printf("\n== The number of internal nodes in the tree exceeds the number of taxa minus one.");
-          PhyML_Printf("\n== There probably is a formating problem in the input tree.");
+          PhyML_Fprintf(stderr,"\n. The number of internal nodes in the tree exceeds the number of taxa minus one.");
+          PhyML_Fprintf(stderr,"\n. There probably is a formating problem in the input tree.");
           Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
         }
 
@@ -179,6 +179,13 @@ void R_rtree(char *s_tree_a, char *s_tree_d, t_node *a, t_tree *tree, int *n_int
         }
 
       subs=Sub_Trees(s_tree_d,&degree);
+
+      if(degree < 2)
+        {
+          PhyML_Fprintf(stderr,"\n. A problem was detected in the following subtree:");
+          PhyML_Fprintf(stderr,"\n. %s",s_tree_d);
+          Generic_Exit(__FILE__,__LINE__,__FUNCTION__);
+        }
 
       if(degree > 2)
         {
@@ -313,10 +320,10 @@ void Read_Branch_Label(char *s_d, char *s_a, t_edge *b)
   if(p)
     {
       /* if(b->n_labels == 1) */
-      /* 	PhyML_Printf("\n\u2022 Read label '%s' on t_edge %3d.",b->labels[0],b->num); */
+      /* 	PhyML_Printf("\n. Read label '%s' on t_edge %3d.",b->labels[0],b->num); */
       /* else */
       /* 	{ */
-      /* 	  PhyML_Printf("\n\u2022 Read labels "); */
+      /* 	  PhyML_Printf("\n. Read labels "); */
       /* 	  for(i=0;i<b->n_labels;i++) PhyML_Printf("'%s' ",b->labels[i]); */
       /* 	  PhyML_Printf("on t_edge %3d.",b->num); */
       /* 	} */
@@ -328,7 +335,7 @@ void Read_Branch_Label(char *s_d, char *s_a, t_edge *b)
     }
   /* else */
   /*   { */
-  /*     PhyML_Printf("\n\u2022 No label found on %s",s_d); */
+  /*     PhyML_Printf("\n. No label found on %s",s_d); */
   /*   } */
   Free(sub_tp);
 }
@@ -497,9 +504,9 @@ char **Sub_Trees(char *tree, int *degree)
       if((*degree) == NODE_DEG_MAX)
         {
           For(i,(*degree))
-            PhyML_Printf("\n\u2022 Subtree %d : %s\n",i+1,subs[i]);
+            PhyML_Fprintf(stderr,"\n. Subtree %d : %s\n",i+1,subs[i]);
           
-          PhyML_Printf("\n\u2022 The degree of a t_node cannot be greater than %d\n",NODE_DEG_MAX);
+          PhyML_Fprintf(stderr,"\n. The degree of a t_node cannot be greater than %d\n",NODE_DEG_MAX);
           Warn_And_Exit("\n");
         }
     }
@@ -547,7 +554,7 @@ void Print_Tree(FILE *fp, t_tree *tree)
       PhyML_Fprintf(fp,"#NEXUS\n");
       PhyML_Fprintf(fp,"BEGIN TREES;\n");
       PhyML_Fprintf(fp,"\tTRANSLATE\n");
-      for(i=0;i<tree->n_otu;i++) PhyML_Fprintf(fp,"\t%3d\t%s,\n",i+1,tree->a_nodes[i]->name);
+      for(i=0;i<tree->n_otu;++i) PhyML_Fprintf(fp,"\t%3d\t%s,\n",i+1,tree->a_nodes[i]->name);
       PhyML_Fprintf(fp,"\tUTREE PAUP_1=\n");
       PhyML_Fprintf(fp,"%s\n",s_tree);
       PhyML_Fprintf(fp,"ENDBLOCK;");
@@ -572,6 +579,7 @@ char *Write_Tree(t_tree *tree, int custom)
   s=(char *)mCalloc(T_MAX_LINE,sizeof(char));
 #endif
 
+  i = -1;
   s[0]='(';
 
   if(custom == NO)
@@ -619,6 +627,13 @@ char *Write_Tree(t_tree *tree, int custom)
     }
 
   s[(int)strlen(s)-1]=')';
+  if(tree->print_node_num == YES)
+    {
+      if(!tree->n_root)
+        sprintf(s+(int)strlen(s),"%d",tree->a_nodes[tree->n_otu+i]->num);
+      else
+        sprintf(s+(int)strlen(s),"%d",tree->n_root->num);        
+    }
   s[(int)strlen(s)]=';';
 
   return s;
@@ -635,19 +650,19 @@ void R_wtree(t_node *pere, t_node *fils, int *available, char **s_tree, t_tree *
 #if !(defined PHYTIME || defined INVITEE)
   phydbl mean_len;
 #endif
-
+  
   format = (char *)mCalloc(100,sizeof(char));
 
   sprintf(format,"%%.%df",tree->bl_ndigits);
-
+  
   p = -1;
-  if(fils->tax)
+  if(fils->tax == YES) // Tip node
     {
       /* printf("\n- Writing on %p",*s_tree); */
       /* ori_len = *pos; */
 
       last_len = (int)strlen(*s_tree);
-
+      
       if(OUTPUT_TREE_FORMAT == NEWICK)
         {
           if(tree->write_tax_names == YES)
@@ -675,9 +690,9 @@ void R_wtree(t_node *pere, t_node *fils, int *available, char **s_tree, t_tree *
         }
       else
         {
-          PhyML_Printf("\n== Unknown tree format.");
-	  PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-          PhyML_Printf("\n== s=%s\n",*s_tree);
+          PhyML_Printf("\n. Unknown tree format.");
+	  PhyML_Printf("\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+          PhyML_Printf("\n. s=%s\n",*s_tree);
         }
       
       if((fils->b) && (fils->b[0]) && (tree->write_br_lens == YES))
@@ -696,20 +711,13 @@ void R_wtree(t_node *pere, t_node *fils, int *available, char **s_tree, t_tree *
               if(pere == tree->n_root)
                 {
                   phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
-                  if(tree->is_mixt_tree == NO)
-                    {
-                      mean_len = tree->e_root->l->v;
-                    }
+                  if(tree->is_mixt_tree == NO) mean_len = tree->e_root->l->v;
                   else mean_len = MIXT_Get_Mean_Edge_Len(tree->e_root,tree);
                   sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len) * root_pos);
                 }
               else
                 {
-                  if(tree->is_mixt_tree == NO)
-                    {
-                      mean_len = fils->b[0]->l->v;
-                    }
-                  
+                  if(tree->is_mixt_tree == NO) mean_len = fils->b[0]->l->v;                  
                   else mean_len = MIXT_Get_Mean_Edge_Len(fils->b[0],tree);
                   sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len));
                 }
@@ -719,1187 +727,1191 @@ void R_wtree(t_node *pere, t_node *fils, int *available, char **s_tree, t_tree *
             {
               sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[0]->l->v));
             }
-          else
-            {
-              if(tree->rates) sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,tree->rates->cur_l[fils->num]));
-              /* sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[0]->l->v)); */
-            }
-#endif
-        }
-      
-      /* strcat(*s_tree,","); */
-      (*s_tree)[(int)strlen(*s_tree)] = ',';
-      
-      
-#ifndef MPI
-      (*available) -= ((int)strlen(*s_tree) - last_len);
-      
-      /* printf("\n0 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
-      /* printf("\n0 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
-      
-      if(*available < 0)
-        {
-          PhyML_Printf("\n== s=%s\n",*s_tree);
-          PhyML_Printf("\n== len=%d\n",(int)strlen(*s_tree));
-          PhyML_Printf("\n== The sequence names in your input file might be too long.");
-          PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-          Warn_And_Exit("");
-        }
-      
-      if(*available < (int)T_MAX_NAME)
-        {
-          (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
-          For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
-          (*available) = 3*(int)T_MAX_NAME;
-          /* printf("\n\u2022 ++ 0 Available = %d",(*available)); */
-        }
-#endif
-      
-    }
-  else
-    {
-      (*s_tree)[(int)strlen(*s_tree)]='(';
-      
-#ifndef MPI
-      (*available) -= 1;
-      
-      /* printf("\n1 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
-      /* printf("\n1 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
-      
-      if(*available < (int)T_MAX_NAME)
-        {
-          (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
-          For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
-          (*available) = 3*(int)T_MAX_NAME;
-          /* printf("\n\u2022 ++ 1 Available = %d",(*available)); */
-        }
-#endif
-      /* (*available)--; */
-      
-      /* if(*available < (int)T_MAX_NAME/2) */
-      /* 	{ */
-      /* 	  (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char)); */
-      /* 	  (*available) = (int)T_MAX_NAME; */
-      /* 	} */
-      
-      
-      if(tree->n_root != NULL)
-        {
-          for(i=0;i<3;i++)
-            {
-              if((fils->v[i] != pere) && (fils->b[i] != tree->e_root))
-                R_wtree(fils,fils->v[i],available,s_tree,tree);
-              else p=i;
-            }
-        }
-      else
-        {
-          for(i=0;i<3;i++)
-            {
-              if(fils->v[i] != pere)
-                R_wtree(fils,fils->v[i],available,s_tree,tree);
-              else p=i;
-            }
-        }
-      
-      if(p < 0)
-        {
-          PhyML_Printf("\n== pere: %d fils=%d root=%d root->v[2]=%d root->v[1]=%d",pere->num,fils->num,tree->n_root->num,tree->n_root->v[2]->num,tree->n_root->v[1]->num);
-          PhyML_Printf("\n== fils=%p root=%p root->v[2]=%p root->v[1]=%p",fils,tree->n_root,tree->n_root->v[2],tree->n_root->v[1]);
-          PhyML_Printf("\n== tree->e_root=%p fils->b[0]=%p fils->b[1]=%p fils->b[2]=%p",tree->e_root,fils->b[0],fils->b[1],fils->b[2]);
-          PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-          Exit("\n");
-        }
-      
-      last_len = (int)strlen(*s_tree);
-      
-      (*s_tree)[last_len-1] = ')';
-      
-      if((fils->b) && (tree->write_br_lens == YES))
-        {
-          if(tree->print_boot_val)
-            {
-              sprintf(*s_tree+(int)strlen(*s_tree),"%d",fils->b[p]->bip_score);
-            }
-          else if(tree->print_alrt_val)
-            {
-              sprintf(*s_tree+(int)strlen(*s_tree),"%f",fils->b[p]->ratio_test);
-            }
-
-
-          fflush(NULL);
-          
-          (*s_tree)[(int)strlen(*s_tree)] = ':';
-          
-#if !(defined PHYTIME || defined INVITEE)
-          if(!tree->n_root)
-            {
-              if(tree->is_mixt_tree == NO)
-                {
-                  mean_len = fils->b[p]->l->v;
-                }
-              else mean_len = MIXT_Get_Mean_Edge_Len(fils->b[p],tree);
-              sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len));
-            }
-          else
-            {
-              if(pere == tree->n_root)
-                {
-                  phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
-                  
-                  if(tree->is_mixt_tree == NO)
-                    {
-                      mean_len = (tree->e_root)?(tree->e_root->l->v):(-1.0);
-                    }
-                  else mean_len = MIXT_Get_Mean_Edge_Len(tree->e_root,tree);
-                  sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len) * root_pos);
-                }
-              else
-                {
-                  if(tree->is_mixt_tree == NO)
-                    {
-                      mean_len = fils->b[p]->l->v;
-                    }
-                  else mean_len = MIXT_Get_Mean_Edge_Len(fils->b[p],tree);
-                  sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len));
-                }
-            }
-#else
-          if(tree->n_root == NULL)
-            {
-              sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[p]->l->v));
-            }
-          else
-            {
-	      if(tree->rates) sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,tree->rates->cur_l[fils->num]));
-              /* sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[p]->l->v)); */
-            }
-#endif
-        }
-      
-      /* strcat(*s_tree,","); */
-      (*s_tree)[(int)strlen(*s_tree)] = ',';
-
-#ifndef MPI
-      (*available) -= ((int)strlen(*s_tree) - last_len);
-
-      /* printf("\n2 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
-      /* printf("\n2 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
-
-      if(*available < 0)
-    {
-      PhyML_Printf("\n== available = %d",*available);
-      PhyML_Printf("\n== Err in file %s at line %d\n",__FILE__,__LINE__);
-      Warn_And_Exit("");
-    }
-
-      if(*available < (int)T_MAX_NAME)
-        {
-          (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
-          For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
-          (*available) = 3*(int)T_MAX_NAME;
-      /* printf("\n\u2022 ++ 2 Available = %d",(*available)); */
-        }
-#endif
-
-      /* if(*available < (int)T_MAX_NAME/2) */
-      /* 	{ */
-      /* 	  (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char)); */
-      /* 	  (*available) = (int)T_MAX_NAME; */
-      /* 	} */
-    }
-
-  Free(format);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-
-void R_wtree_Custom(t_node *pere, t_node *fils, int *available, char **s_tree, int *pos, t_tree *tree)
-{
-  int i,p,ori_len;
-  char *format;
-
-  format = (char *)mCalloc(100,sizeof(char));
-
-  sprintf(format,"%%.%df",tree->bl_ndigits);
-  /* strcpy(format,"%f"); */
-
-  p = -1;
-  if(fils->tax)
-    {
-/*       printf("\n- Writing on %p",*s_tree); */
-      ori_len = *pos;
-
-      if(OUTPUT_TREE_FORMAT == NEWICK)
-    {
-      if(tree->write_tax_names == YES)
-        {
-          if(tree->io && tree->io->long_tax_names)
-        {
-          strcat(*s_tree,tree->io->long_tax_names[fils->num]);
-          (*pos) += (int)strlen(tree->io->long_tax_names[fils->num]);
-        }
-          else
-        {
-          strcat(*s_tree,fils->name);
-          (*pos) += (int)strlen(fils->name);
-        }
-        }
-      else if(tree->write_tax_names == NO)
-        {
-          (*pos) += sprintf(*s_tree+*pos,"%d",fils->num);
-        }
-    }
-      else if(OUTPUT_TREE_FORMAT == NEXUS)
-    {
-      (*pos) += sprintf(*s_tree+*pos,"%d",fils->num+1);
-    }
-      else
-    {
-      PhyML_Printf("\n== Unknown tree format.");
-      PhyML_Printf("\n== Err in file %s at line %d\n",__FILE__,__LINE__);
-      PhyML_Printf("\n== s=%s\n",*s_tree);
-    }
-
-      if((fils->b) && (fils->b[0]) && (tree->write_br_lens == YES))
-    {
-      strcat(*s_tree,":");
-      (*pos)++;
-
-#if !(defined PHYTIME || defined INVITEE)
-      if(!tree->n_root)
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
-        }
-      else
-        {
-          if(pere == tree->n_root)
-        {
-          phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
-          (*pos) += sprintf(*s_tree+*pos,format,tree->e_root->l->v * root_pos);
-        }
-          else
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
-        }
-        }
-#else
-      if(!tree->n_root)
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
-        }
-      else
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,tree->rates->cur_l[fils->num]);
-        }
-#endif
-        }
-
-      if(tree->write_labels)
-        {
-          if(fils->b[0]->n_labels < 10)
-            For(i,fils->b[0]->n_labels)
-              {
-                (*pos) += sprintf(*s_tree+*pos,"::%s",fils->b[0]->labels[i]);
-              }
-          else
-            {
-              (*pos) += sprintf(*s_tree+*pos,"::%d_labels",fils->b[0]->n_labels);
-            }
-        }
-
-
-      strcat(*s_tree,",");
-      (*pos)++;
-
-      (*available) = (*available) - (*pos - ori_len);
-
-      if(*available < 0)
-    {
-      PhyML_Printf("\n== s=%s\n",*s_tree);
-      PhyML_Printf("\n== len=%d\n",strlen(*s_tree));
-      PhyML_Printf("\n== The sequence names in your input file might be too long.");
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-      Warn_And_Exit("");
-    }
-
-      if(*available < (int)T_MAX_NAME)
-    {
-      (*s_tree) = (char *)mRealloc(*s_tree,*pos+3*(int)T_MAX_NAME,sizeof(char));
-      For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
-      (*available) = 3*(int)T_MAX_NAME;
-    }
-/*       printf(" %s [%d,%d]",*s_tree,(int)strlen(*s_tree),*available); */
-    }
-  else
-    {
-
-      (*s_tree)[(*pos)]='(';
-      (*s_tree)[(*pos)+1]='\0';
-      (*pos)++;
-      (*available)--;
-
-      if(*available < (int)T_MAX_NAME/2)
-    {
-      (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char));
-      (*available) = (int)T_MAX_NAME;
-    }
-
-      if(tree->n_root)
-    {
-      for(i=0;i<3;i++)
-        {
-          if((fils->v[i] != pere) && (fils->b[i] != tree->e_root))
-        R_wtree_Custom(fils,fils->v[i],available,s_tree,pos,tree);
-          else p=i;
-        }
-    }
-      else
-    {
-      for(i=0;i<3;i++)
-        {
-          if(fils->v[i] != pere)
-        R_wtree_Custom(fils,fils->v[i],available,s_tree,pos,tree);
-          else p=i;
-        }
-    }
-
-      ori_len = *pos;
-
-      if(p < 0)
-    {
-      PhyML_Printf("\n== fils=%p root=%p root->v[2]=%p root->v[1]=%p",fils,tree->n_root,tree->n_root->v[2],tree->n_root->v[1]);
-      PhyML_Printf("\n== tree->e_root=%p fils->b[0]=%p fils->b[1]=%p fils->b[2]=%p",tree->e_root,fils->b[0],fils->b[1],fils->b[2]);
-      PhyML_Printf("\n== Err in file %s at line %d\n",__FILE__,__LINE__);
-      Warn_And_Exit("");
-    }
-
-/*       printf("\n+ Writing on %p",*s_tree); */
-      (*s_tree)[(*pos)-1] = ')';
-      (*s_tree)[(*pos)]   = '\0';
-
-      if((fils->b) && (tree->write_br_lens == YES))
-    {
-      if(tree->print_boot_val)
-        {
-          (*pos) += sprintf(*s_tree+*pos,"%d",fils->b[p]->bip_score);
-        }
-      else if(tree->print_alrt_val)
-        {
-          (*pos) += sprintf(*s_tree+*pos,"%f",fils->b[p]->ratio_test);
-        }
-
-      fflush(NULL);
-
-      strcat(*s_tree,":");
-      (*pos)++;
-
-#if !(defined PHYTIME || defined INVITEE)
-      if(!tree->n_root)
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
-        }
-      else
-        {
-          if(pere == tree->n_root)
-        {
-          phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
-          (*pos) += sprintf(*s_tree+*pos,format,tree->e_root->l->v * root_pos);
-        }
-          else
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
-        }
-        }
-#else
-      if(!tree->n_root)
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
-        }
-      else
-        {
-          (*pos) += sprintf(*s_tree+*pos,format,tree->rates->cur_l[fils->num]);
-        }
-#endif
-
-    }
-
-      if((tree->write_labels) && (fils->b[p]->labels != NULL))
-        {
-          if(fils->b[p]->n_labels < 10)
-            For(i,fils->b[p]->n_labels)
-              {
-                (*pos) += sprintf(*s_tree+*pos,"::%s",fils->b[p]->labels[i]);
-              }
-          else
-            {
-              (*pos) += sprintf(*s_tree+*pos,"::%d_labels",fils->b[p]->n_labels);
-            }
-        }
-
-      strcat(*s_tree,",");
-      (*pos)++;
-      (*available) = (*available) - (*pos - ori_len);
-
-      if(*available < 0)
-    {
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-      Warn_And_Exit("");
-    }
-
-      if(*available < (int)T_MAX_NAME)
-    {
-      (*s_tree) = (char *)mRealloc(*s_tree,*pos+3*(int)T_MAX_NAME,sizeof(char));
-      For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
-      (*available) = 3*(int)T_MAX_NAME;
-    }
-/*       printf(" %s [%d,%d]",*s_tree,(int)strlen(*s_tree),*available); */
-    }
-
-  Free(format);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-void Detect_Align_File_Format(option *io)
-{
-  int c;
-  fpos_t curr_pos;
-
-  fgetpos(io->fp_in_align,&curr_pos);
-
-  errno = 0;
-
-  while((c=fgetc(io->fp_in_align)) != EOF)
-    {
-      if(errno) io->data_file_format = PHYLIP;
-      else if(c == '#')
-        {
-          char s[10],t[6]="NEXUS";
-          if(!fgets(s,6,io->fp_in_align))
-            {
-              PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-              Exit("\n");
-            }
-          if(!strcmp(t,s))
-            {
-              fsetpos(io->fp_in_align,&curr_pos);
-              io->data_file_format = NEXUS;
-              return;
-            }
-        }
-    }  
-  fsetpos(io->fp_in_align,&curr_pos);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-void Detect_Tree_File_Format(option *io)
-{
-  int c;
-  fpos_t curr_pos;
-
-  fgetpos(io->fp_in_tree,&curr_pos);
-
-  errno = 0;
-
-  while((c=fgetc(io->fp_in_tree)) != EOF)
-    {
-      if(errno)
-    {
-      io->tree_file_format = PHYLIP;
-      PhyML_Printf("\n\u2022 Detected PHYLIP tree file format.");
-    }
-      else if(c == '#')
-    {
-      char s[10],t[6]="NEXUS";
-      if(!fgets(s,6,io->fp_in_tree))
-        {
-          PhyML_Printf("\n\u2022 Err. in file %s at line %d\n",__FILE__,__LINE__);
-          Warn_And_Exit("");
-        }
-      if(!strcmp(t,s))
-        {
-          fsetpos(io->fp_in_tree,&curr_pos);
-          io->tree_file_format = NEXUS;
-          PhyML_Printf("\n\u2022 Detected NEXUS tree file format.");
-          return;
-        }
-    }
-    }
-
-  fsetpos(io->fp_in_tree,&curr_pos);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-align **Get_Seq(option *io)
-{
-  io->data = NULL;
-  
-  if(!io->fp_in_align)
-    {
-      PhyML_Printf("\n== Filehandle to '%s' seems to be closed.",io->in_align_file);
-      Exit("\n");
-    }
-  
-  Detect_Align_File_Format(io);
-
-  switch(io->data_file_format)
-    {
-    case PHYLIP:
-      {
-        io->data = Get_Seq_Phylip(io);
-        break;
-      }
-    case NEXUS:
-      {
-        io->nex_com_list = Make_Nexus_Com();
-        Init_Nexus_Format(io->nex_com_list);
-        Get_Nexus_Data(io->fp_in_align,io);
-        Free_Nexus(io);
-    break;
-      }
-    default:
-      {
-        PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-        Exit("\n");
-        break;
-      }
-    }
-  
-  if(!io->data)
-    {
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-      Exit("\n");
-    }
-  else
-    {
-      Post_Process_Data(io);
-    }
-
-
-  return io->data;
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-void Post_Process_Data(option *io)
-{
-  int i,j,swap;
-  align *data_buff;
-
-  for(i=0;i<io->data[0]->len;++i)
-    {
-      for(j=0;j<io->n_otu;++j)
-        {
-          if((io->data[j]->state[i] == '?') || (io->data[j]->state[i] == '-')) io->data[j]->state[i] = 'X';
-          if((io->datatype == NT) && (io->data[j]->state[i] == 'N')) io->data[j]->state[i] = 'X';
-          if(io->data[j]->state[i] == 'U') io->data[j]->state[i] = 'T';
-        }
-    }
-
-  for(i=0;i<io->n_otu;++i) io->data[i]->len = io->data[0]->len;
-
-  /* Sequences are ordered alphabetically */
-  data_buff = NULL;
-  swap = TRUE;
-  /* swap = FALSE; */
-  while(swap == TRUE)
-    {
-      swap = FALSE;
-      for(i=0;i<io->n_otu-1;i++)
-        {
-          for(j=i+1;j<io->n_otu;j++)
-            {
-              if(strcmp(io->data[i]->name,io->data[j]->name) < 0)
-                {
-                  swap = TRUE;
-                  data_buff = io->data[i];
-                  io->data[i] = io->data[j];
-                  io->data[j] = data_buff;
-                }
-            }
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-/* align **Get_Seq_Nexus(option *io) */
-/* { */
-/*   char *s,*ori_s; */
-/*   char *token; */
-/*   int in_comment; */
-/*   nexcom *curr_com; */
-/*   nexparm *curr_parm; */
-/*   int nxt_token_t,cur_token_t; */
-
-/*   s = (char *)mCalloc(T_MAX_LINE,sizeof(char)); */
-/*   token = (char *)mCalloc(T_MAX_TOKEN,sizeof(char)); */
-
-/*   ori_s      = s; */
-/*   in_comment = NO; */
-/*   curr_com   = NULL; */
-/*   curr_parm  = NULL; */
-/*   nxt_token_t = NEXUS_COM;  */
-/*   cur_token_t = -1;  */
-
-/*   while(fgets(s,T_MAX_LINE,io->fp_in_align)) */
-/*     {       */
-/*       do */
-/* 	{	   */
-/* 	  Get_Token(&s,token);	   */
-
-/* /\* 	  PhyML_Printf("\n\u2022 Token: '%s' next_token=%d cur_token=%d",token,nxt_token_t,cur_token_t); *\/ */
-
-/* 	  if(token[0] == '\0') break; */
-
-/* 	  if(token[0] == ';')  */
-/* 	    { */
-/* 	      curr_com   = NULL; */
-/* 	      curr_parm  = NULL; */
-/* 	      nxt_token_t = NEXUS_COM; */
-/* 	      cur_token_t = -1; */
-/* 	      break; /\* End of command *\/  */
-/* 	    } */
-
-/* 	  if(nxt_token_t == NEXUS_EQUAL)  */
-/* 	    { */
-/* 	      cur_token_t = NEXUS_VALUE; */
-/* 	      nxt_token_t = NEXUS_PARM; */
-/* 	      continue; */
-/* 	    } */
-
-/* 	  if((nxt_token_t == NEXUS_COM) && (cur_token_t != NEXUS_VALUE))  */
-/* 	    { */
-/* 	      Find_Nexus_Com(token,&curr_com,&curr_parm,io->nex_com_list); */
-/* 	      if(curr_com)  */
-/* 		{ */
-/* 		  nxt_token_t = curr_com->nxt_token_t; */
-/* 		  cur_token_t = curr_com->cur_token_t; */
-/* 		} */
-/* 	      if(cur_token_t != NEXUS_VALUE) continue; */
-/* 	    } */
-
-/* 	  if((nxt_token_t == NEXUS_PARM) && (cur_token_t != NEXUS_VALUE))  */
-/* 	    { */
-/* 	      Find_Nexus_Parm(token,&curr_parm,curr_com); */
-/* 	      if(curr_parm)  */
-/* 		{ */
-/* 		  nxt_token_t = curr_parm->nxt_token_t; */
-/* 		  cur_token_t = curr_parm->cur_token_t; */
-/* 		} */
-/* 	      if(cur_token_t != NEXUS_VALUE) continue; */
-/* 	    } */
-
-/* 	  if(cur_token_t == NEXUS_VALUE) */
-/* 	    { */
-/* 	      if((curr_parm->fp)(token,curr_parm,io))  /\* Read in parameter value *\/ */
-/* 		{ */
-/* 		  nxt_token_t = NEXUS_PARM; */
-/* 		  cur_token_t = -1; */
-/* 		} */
-/* 	    } */
-/* 	} */
-/*       while(strlen(token) > 0); */
-/*     } */
-
-/*   Free(ori_s); */
-/*   Free(token); */
-
-/*   return io->data; */
-/* } */
-
-/* /\*********************************************************\/ */
-
-void Get_Nexus_Data(FILE *fp, option *io)
-{
-  char *token;
-  nexcom *curr_com;
-  nexparm *curr_parm;
-  int nxt_token_t,cur_token_t;
-
-  token = (char *)mCalloc(T_MAX_TOKEN,sizeof(char));
-
-  curr_com   = NULL;
-  curr_parm  = NULL;
-  nxt_token_t = NEXUS_COM;
-  cur_token_t = -1;
-
-  do
-    {
-      if(!Get_Token(fp,token)) break;
-
-      /* PhyML_Printf("\n+ Token: '%s' next_token=%d cur_token=%d",token,nxt_token_t,cur_token_t); */
-
-      if(token[0] == ';')
-        {
-          curr_com    = NULL;
-          curr_parm   = NULL;
-          nxt_token_t = NEXUS_COM;
-          cur_token_t = -1;
-        }
-      
-      if(nxt_token_t == NEXUS_EQUAL)
-        {
-          cur_token_t = NEXUS_VALUE;
-          nxt_token_t = NEXUS_PARM;
-          continue;
-        }
-      
-      if((nxt_token_t == NEXUS_COM) && (cur_token_t != NEXUS_VALUE))
-        {
-          Find_Nexus_Com(token,&curr_com,&curr_parm,io->nex_com_list);
-          if(curr_com)
-            {
-              nxt_token_t = curr_com->nxt_token_t;
-              cur_token_t = curr_com->cur_token_t;
-            }
-          if(cur_token_t != NEXUS_VALUE) continue;
-        }
-      
-      if((nxt_token_t == NEXUS_PARM) && (cur_token_t != NEXUS_VALUE))
-        {
-          Find_Nexus_Parm(token,&curr_parm,curr_com);
-          if(curr_parm)
-            {
-              nxt_token_t = curr_parm->nxt_token_t;
-              cur_token_t = curr_parm->cur_token_t;
-            }
-          if(cur_token_t != NEXUS_VALUE) continue;
-        }
-      
-      if(cur_token_t == NEXUS_VALUE)
-        {
-          if((curr_parm->fp)(token,curr_parm,io))  /* Read in parameter value */
-            {
-              nxt_token_t = NEXUS_PARM;
-              cur_token_t = -1;
-            }
-        }
-    }
-  while(strlen(token) > 0);
-  
-  Free(token);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-
-int Get_Token(FILE *fp, char *token)
-{
-  char c;
-
-  c = ' ';
-
-  while(c == ' ' || c == '\t' || c == '\n' || c == '\r')
-    {
-      c = fgetc(fp);
-      if(c == EOF) return 0;
-    }
-  
-  if(c == '"')
-    {
-      do
-        {
-          *token = c;
-          token++;
-          c = fgetc(fp);
-          if(c == EOF) return 0;
-        }
-      while(c != '"');
-      *token = c;
-      /* c = fgetc(fp); */
-      if(c == EOF) return 0;
-      *(token+1) = '\0';
-      return 1;
-    }
-  
-  if(c == '[')
-    {
-      Skip_Comment(fp);
-      c = fgetc(fp);
-      *token = c;
-      token++;
-      if(c == EOF) return 0;
-      return 1;
-    }
-
-  if(c == '#')      { *token = c; token++; }
-  else if(c == ';') { *token = c; token++; }
-  else if(c == ',') { *token = c; token++; }
-  else if(c == '.') { *token = c; token++; }
-  else if(c == '=') { *token = c; token++; }
-  else if(c == '(') { *token = c; token++; }
-  else if(c == ')') { *token = c; token++; }
-  else if(c == '{') { *token = c; token++; }
-  else if(c == '}') { *token = c; token++; }
-  else if(c == '?') { *token = c; token++; }
-  else if(c == '-') { *token = c; token++; }
-  else
-    {
-      while(isgraph(c) && c != ';' && c != '-' && c != ',' && c != '=')
-        {
-          *(token++) = c;
-          c = fgetc(fp);
-          if(c == EOF) return 0;
-        }
-      
-      fseek(fp,-1*sizeof(char),SEEK_CUR);
-
-    }
-  *token = '\0';
-  return 1;
-}
-
-
-/* void Get_Token(char *line, char *token) */
-/* { */
-/*   while(**line == ' ' || **line == '\t') (*line)++; */
-
-
-/*   if(**line == '"')  */
-/*     { */
-/*       do { *token = **line; (*line)++; token++; } while(**line != '"'); */
-/*       *token = **line; */
-/*       (*line)++; */
-/*       *(token+1) = '\0'; */
-/*       return; */
-/*     } */
-
-/*   if(**line == '[')  */
-/*     { */
-/*       int in_comment; */
-
-/*       in_comment = 1; */
-/*       do  */
-/* 	{  */
-/* 	  (*line)++;  */
-/* 	  if(**line == '[')  */
-/* 	    { */
-/* 	      in_comment++; */
-/* 	    } */
-/* 	  else if(**line == ']') in_comment--;	   */
-/* 	} */
-/*       while(in_comment); */
-/*       (*line)++; */
-/*       return; */
-/*     } */
-
-
-/*   if(**line == '#')      {*token = **line; (*line)++; token++; } */
-/*   else if(**line == ';') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == ',') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '.') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '=') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '(') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == ')') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '{') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '}') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '?') {*token = **line; (*line)++; token++; } */
-/*   else if(**line == '-') {*token = **line; (*line)++; token++; } */
-/*   else */
-/*     { */
-/*       while(isgraph(**line) && **line != ';' && **line != '=' && **line != ',')  */
-/* 	{ */
-/* 	  *(token++) = **line; */
-/* 	  (*line)++;  */
-/* 	} */
-/*     } */
-/*   *token = '\0'; */
-/* } */
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-align **Get_Seq_Phylip(option *io)
-{
-  Read_Ntax_Len_Phylip(io->fp_in_align,&io->n_otu,&io->init_len);
-
-  if(io->n_otu > N_MAX_OTU)
-    {
-      PhyML_Printf("\n== The number of taxa should not exceed %d",N_MAX_OTU);
-      Exit("\n");
-    }
-  
-  if(io->interleaved) io->data = Read_Seq_Interleaved(io);
-  else                io->data = Read_Seq_Sequential(io);
-
-  return io->data;
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-void Read_Ntax_Len_Phylip(FILE *fp ,int *n_otu, int *n_tax)
-{
-  char *line;
-  int readok;
-
-  line = (char *)mCalloc(T_MAX_LINE,sizeof(char));
-
-  readok = 0;
-  do
-    {
-      if(fscanf(fp,"%s",line) == EOF)
-        {
-          Free(line);
-          PhyML_Printf("\n== PhyML can't read in this alignment.");
-          PhyML_Printf("\n== Could it be that sequence file is empty?");
-          PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-          Exit("\n");
-        }
-      else
-        {
-          if(strcmp(line,"\n") && strcmp(line,"\r") && strcmp(line,"\t"))
-            {
-              sscanf(line,"%d",n_otu);
-              if(*n_otu <= 0) Warn_And_Exit("\n\u2022 The number of taxa cannot be negative.\n");
-              
-              if(!fscanf(fp,"%s",line)) Exit("\n");
-              sscanf(line,"%d",n_tax);
-              if(*n_tax <= 0) Warn_And_Exit("\n\u2022 The sequence length cannot be negative.\n");
-              else readok = 1;
-            }
-        }
-    }while(!readok);
-
-  Free(line);
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-align **Read_Seq_Sequential(option *io)
-{
-  int i;
-  char *line;
-  align **data;
-/*   char c; */
-  char *format;
-
-  format = (char *)mCalloc(T_MAX_NAME,sizeof(char));
-  line   = (char *)mCalloc(T_MAX_LINE,sizeof(char));
-  data   = (align **)mCalloc(io->n_otu,sizeof(align *));
-
-/*   while((c=fgetc(in))!='\n'); */
- /*  while(((c=fgetc(io->fp_in_align))!='\n') && (c != ' ') && (c != '\r') && (c != '\t')); */
-  
-  sprintf(format, "%%%ds", T_MAX_NAME);
-
-
-  for(i=0;i<io->n_otu;i++)
-    {
-      data[i]        = (align *)mCalloc(1,sizeof(align));
-      data[i]->name  = (char *)mCalloc(T_MAX_NAME,sizeof(char));
-      data[i]->state = (char *)mCalloc(io->init_len*io->state_len+1,sizeof(char));
-
-      data[i]->is_ambigu = NULL;
-      data[i]->len = 0;
-
-      if(!fscanf(io->fp_in_align,format,data[i]->name)) Exit("\n");
-
-      Check_Sequence_Name(data[i]->name);
-
-      while(data[i]->len < io->init_len * io->state_len) assert(Read_One_Line_Seq(&data,i,io->fp_in_align));
-
-      if(data[i]->len != io->init_len * io->state_len)
-        {
-          PhyML_Printf("\n== Err. Problem with species %s's sequence (check the format).\n",data[i]->name);
-          PhyML_Printf("\n== Observed sequence length: %d, expected length: %d\n",data[i]->len, io->init_len * io->state_len);
-          Warn_And_Exit("");
-        }
-    }
-
-  for(i=0;i<io->n_otu;i++) data[i]->state[data[i]->len] = '\0';
-
-  Restrict_To_Coding_Position(data,io);
-
-  Free(format);
-  Free(line);
-
-  return data;
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-align **Read_Seq_Interleaved(option *io)
-{
-  int i,end,num_block;
-  char *line;
-  align **data;
-/*   char c; */
-  char *format;
-  fpos_t curr_pos;
-
-  line   = (char *)mCalloc(T_MAX_LINE,sizeof(char));
-  format = (char *)mCalloc(T_MAX_NAME, sizeof(char));
-  data   = (align **)mCalloc(io->n_otu,sizeof(align *));
-
-/*   while(((c=fgetc(io->fp_in_align))!='\n') && (c != ' ') && (c != '\r') && (c != '\t')); */
-
-  sprintf(format, "%%%ds", T_MAX_NAME);
-
-  end = 0;
-  for(i=0;i<io->n_otu;i++)
-    {
-      data[i]        = (align *)mCalloc(1,sizeof(align));
-      data[i]->name  = (char *)mCalloc(T_MAX_NAME,sizeof(char));
-      data[i]->state = (char *)mCalloc(io->init_len*io->state_len+1,sizeof(char));
-      
-      data[i]->len       = 0;
-      data[i]->is_ambigu = NULL;
-      
-      if(!fscanf(io->fp_in_align,format,data[i]->name)) Exit("\n");
-      
-      Check_Sequence_Name(data[i]->name);
-      
-      if(!Read_One_Line_Seq(&data,i,io->fp_in_align))
-        {
-          end = 1;
-          if((i != io->n_otu) && (i != io->n_otu-1))
-            {
-              PhyML_Printf("\n== i:%d n_otu:%d",i,io->n_otu);
-              PhyML_Printf("\n== Err.: problem with species %s's sequence.\n",data[i]->name);
-              PhyML_Printf("\n== Observed sequence length: %d, expected length: %d\n",data[i]->len, io->init_len * io->state_len);
-              Exit("");
-            }
-          break;
-        }
-    }
-  
-  if(data[0]->len == io->init_len * io->state_len) end = 1;
-
-/*   if(end) printf("\n\u2022 finished yet '%c'\n",fgetc(io->fp_in_align)); */
-  if(!end)
-    {
-      end = 0;
-      num_block = 1;
-      do
-        {
-          num_block++;
-          
-          /* interblock */
-          if(!fgets(line,T_MAX_LINE,io->fp_in_align)) break;
- 
-          if(line[0] != 13 && line[0] != 10)
-            {
-              PhyML_Printf("\n== Err.: one or more missing sequences in block %d.\n",num_block-1);
-              Exit("");
-            }
-          
-          for(i=0;i<io->n_otu;i++) if(data[i]->len != io->init_len * io->state_len) break;
-          
-          if(i == io->n_otu) break;
-          
-          for(i=0;i<io->n_otu;i++)
-            {
-              /* Skip the taxon name, if any, in this interleaved block */
-              fgetpos(io->fp_in_align,&curr_pos);
-              if(!fscanf(io->fp_in_align,format,line))
-                {
-                  PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-                  Warn_And_Exit("");
-                }
-              if(line && strcmp(line,data[i]->name)) fsetpos(io->fp_in_align,&curr_pos);
-              
-              if(data[i]->len > io->init_len * io->state_len)
-                {
-                  PhyML_Printf("\n== Observed sequence length=%d expected length=%d.\n",data[i]->len,io->init_len * io->state_len);
-                  PhyML_Printf("\n== Err.: Problem with species %s's sequence.\n",data[i]->name);
-                  Exit("");
-                }
-              else if(!Read_One_Line_Seq(&data,i,io->fp_in_align))
-                {
-                  end = 1;
-                  if((i != io->n_otu) && (i != io->n_otu-1))
-                    {
-                      PhyML_Printf("\n== Err.: Problem with species %s's sequence.\n",data[i]->name);
-                      PhyML_Printf("\n== Observed sequence length: %d, expected length: %d.\n",data[i]->len, io->init_len * io->state_len);
-                      Exit("");
-                    }
-                  break;
-                }
-            }
-        }while(!end);
-    }
-  
-  for(i=0;i<io->n_otu;i++) data[i]->state[data[i]->len] = '\0';
-
-  for(i=0;i<io->n_otu;i++)
-    {
-      if(data[i]->len != io->init_len * io->state_len)
-        {
-          PhyML_Printf("\n== Check sequence '%s' length (expected length: %d, observed length: %d) [OTU %d].\n",data[i]->name,io->init_len,data[i]->len,i+1);
-          Exit("");
-        }
-    }
-  
-  Restrict_To_Coding_Position(data,io);
-
-  Free(format);
-  Free(line);
-
-  return data;
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-
-int Read_One_Line_Seq(align ***data, int num_otu, FILE *in)
-{
-  char c = ' ';
-  int nchar = 0;
-
-  while(1)
-    {
-/*       if((c == EOF) || (c == '\n') || (c == '\r')) break; */
-
-      if((c == 13) || (c == 10))
-        {
-          /* PhyML_Printf("[%d %d]\n",c,nchar); fflush(NULL); */
-          if(!nchar)
-            {
-              c=(char)fgetc(in);
-              continue;
-            }
-          else
-            {
-              /* PhyML_Printf("break\n"); */
-              break;
-            }
-        }
-      else if(c == EOF)
-        {
-          /* PhyML_Printf("EOL\n"); */
-          break;
-        }
-      else if((c == ' ') || (c == '\t') || (c == 32))
-        {
-          /* PhyML_Printf("[%d]",c); */
-          c=(char)fgetc(in);
-          continue;
-        }
-      
-      nchar++;
-      Uppercase(&c);
-
-      if(c == '.')
-        {
-          c = (*data)[0]->state[(*data)[num_otu]->len];
-          if(!num_otu)
-            c = 'N'; // bowhan: allow . in the first sequence (for MUSCLE), but with N, it won't cause any false positive for CRISPR design 
-            // Warn_And_Exit("\n== Err: Symbol \".\" should not appear in the first sequence\n");
+		  else
+		    {
+		      if(tree->rates) sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,tree->rates->cur_l[fils->num]));
+		      /* sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[0]->l->v)); */
+		    }
+	#endif
+		}
+	      
+	      /* strcat(*s_tree,","); */
+	      (*s_tree)[(int)strlen(*s_tree)] = ',';
+	      
+	      
+	#ifndef MPI
+	      (*available) -= ((int)strlen(*s_tree) - last_len);
+	      
+	      /* printf("\n0 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
+	      /* printf("\n0 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
+	      
+	      if(*available < 0)
+		{
+		  PhyML_Fprintf(stderr,"\n. s=%s\n",*s_tree);
+		  PhyML_Fprintf(stderr,"\n. len=%d\n",(int)strlen(*s_tree));
+		  PhyML_Fprintf(stderr,"\n. The sequence names in your input file might be too long.");
+		  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+		  Warn_And_Exit("");
+		}
+	      
+	      if(*available < (int)T_MAX_NAME)
+		{
+		  (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
+		  For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
+		  (*available) = 3*(int)T_MAX_NAME;
+		  /* printf("\n. ++ 0 Available = %d",(*available)); */
+		}
+	#endif
+	      
+	    }
+	  else // Internal node
+	    {
+	      (*s_tree)[(int)strlen(*s_tree)]='(';
+	      
+	#ifndef MPI
+	      (*available) -= 1;
+	      
+	      /* printf("\n1 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
+	      /* printf("\n1 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
+	      
+	      if(*available < (int)T_MAX_NAME)
+		{
+		  (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
+		  For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
+		  (*available) = 3*(int)T_MAX_NAME;
+		  /* printf("\n. ++ 1 Available = %d",(*available)); */
+		}
+	#endif
+	      /* (*available)--; */
+	      
+	      /* if(*available < (int)T_MAX_NAME/2) */
+	      /* 	{ */
+	      /* 	  (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char)); */
+	      /* 	  (*available) = (int)T_MAX_NAME; */
+	      /* 	} */
+	      
+	      
+	      if(tree->n_root != NULL)
+		{
+		  for(i=0;i<3;i++)
+		    {
+		      if((fils->v[i] != pere) && (fils->b[i] != tree->e_root))
+			R_wtree(fils,fils->v[i],available,s_tree,tree);
+		      else p=i;
+		    }
+		}
+	      else
+		{
+		  for(i=0;i<3;i++)
+		    {
+		      if(fils->v[i] != pere)
+			R_wtree(fils,fils->v[i],available,s_tree,tree);
+		      else p=i;
+		    }
+		}
+	      
+	      if(p < 0)
+		{
+		  PhyML_Fprintf(stderr,"\n. pere: %d fils=%d root=%d root->v[2]=%d root->v[1]=%d",pere->num,fils->num,tree->n_root->num,tree->n_root->v[2]->num,tree->n_root->v[1]->num);
+		  PhyML_Fprintf(stderr,"\n. fils=%p root=%p root->v[2]=%p root->v[1]=%p",fils,tree->n_root,tree->n_root->v[2],tree->n_root->v[1]);
+		  PhyML_Fprintf(stderr,"\n. tree->e_root=%p fils->b[0]=%p fils->b[1]=%p fils->b[2]=%p",tree->e_root,fils->b[0],fils->b[1],fils->b[2]);
+		  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+		  Exit("\n");
+		}
+	      
+	      last_len = (int)strlen(*s_tree);
+	      
+	      (*s_tree)[last_len-1] = ')';
+	      
+	      
+	      if((fils->b) && (tree->write_br_lens == YES))
+		{
+		  if(tree->print_boot_val == YES)
+		    {
+		      sprintf(*s_tree+(int)strlen(*s_tree),"%d",fils->b[p]->bip_score);
+		    }
+		  else if(tree->print_alrt_val == YES)
+		    {
+		      sprintf(*s_tree+(int)strlen(*s_tree),"%f",fils->b[p]->ratio_test);
+		    }
+		  else if(tree->print_node_num == YES)
+		    {
+		      sprintf(*s_tree+(int)strlen(*s_tree),"%d",fils->num);
+		    }
+		  
+		  fflush(NULL);
+		  
+		  (*s_tree)[(int)strlen(*s_tree)] = ':';
+		  
+	#if !(defined PHYTIME || defined INVITEE)
+		  if(!tree->n_root)
+		    {
+		      if(tree->is_mixt_tree == NO)
+			{
+			  mean_len = fils->b[p]->l->v;
+			}
+		      else mean_len = MIXT_Get_Mean_Edge_Len(fils->b[p],tree);
+		      sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len));
+		    }
+		  else
+		    {
+		      if(pere == tree->n_root)
+			{
+			  phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
+			  
+			  if(tree->is_mixt_tree == NO)
+			    {
+			      mean_len = (tree->e_root)?(tree->e_root->l->v):(-1.0);
+			    }
+			  else mean_len = MIXT_Get_Mean_Edge_Len(tree->e_root,tree);
+			  sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len) * root_pos);
+			}
+		      else
+			{
+			  if(tree->is_mixt_tree == NO)
+			    {
+			      mean_len = fils->b[p]->l->v;
+			    }
+			  else mean_len = MIXT_Get_Mean_Edge_Len(fils->b[p],tree);
+			  sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,mean_len));
+			}
+		    }
+	#else
+		  if(tree->n_root == NULL)
+		    {
+		      sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[p]->l->v));
+		    }
+		  else
+		    {
+		      if(tree->rates) sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,tree->rates->cur_l[fils->num]));
+		      /* sprintf(*s_tree+(int)strlen(*s_tree),format,MAX(0.0,fils->b[p]->l->v)); */
+		    }
+	#endif
+		}
+	      
+	      /* strcat(*s_tree,","); */
+	      (*s_tree)[(int)strlen(*s_tree)] = ',';
+
+	#ifndef MPI
+	      (*available) -= ((int)strlen(*s_tree) - last_len);
+
+	      /* printf("\n2 Available = %d [%d %d]",(*available),(int)strlen(*s_tree),last_len); */
+	      /* printf("\n2 %s [%d,%d]",*s_tree,(int)(int)strlen(*s_tree),*available); */
+
+	      if(*available < 0)
+		{
+		  PhyML_Fprintf(stderr,"\n. available = %d",*available);
+		  PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+		  Warn_And_Exit("");
+		}
+
+	      if(*available < (int)T_MAX_NAME)
+		{
+		  (*s_tree) = (char *)mRealloc(*s_tree,(int)strlen(*s_tree)+3*(int)T_MAX_NAME,sizeof(char));
+		  For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
+		  (*available) = 3*(int)T_MAX_NAME;
+		  /* printf("\n. ++ 2 Available = %d",(*available)); */
+		}
+	#endif
+
+	      /* if(*available < (int)T_MAX_NAME/2) */
+	      /* 	{ */
+	      /* 	  (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char)); */
+	      /* 	  (*available) = (int)T_MAX_NAME; */
+	      /* 	} */
+	    }
+
+	  Free(format);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+
+	void R_wtree_Custom(t_node *pere, t_node *fils, int *available, char **s_tree, int *pos, t_tree *tree)
+	{
+	  int i,p,ori_len;
+	  char *format;
+
+	  format = (char *)mCalloc(100,sizeof(char));
+
+	  sprintf(format,"%%.%df",tree->bl_ndigits);
+	  /* strcpy(format,"%f"); */
+
+	  p = -1;
+	  if(fils->tax)
+	    {
+	/*       printf("\n- Writing on %p",*s_tree); */
+	      ori_len = *pos;
+
+	      if(OUTPUT_TREE_FORMAT == NEWICK)
+	    {
+	      if(tree->write_tax_names == YES)
+		{
+		  if(tree->io && tree->io->long_tax_names)
+		{
+		  strcat(*s_tree,tree->io->long_tax_names[fils->num]);
+		  (*pos) += (int)strlen(tree->io->long_tax_names[fils->num]);
+		}
+		  else
+		{
+		  strcat(*s_tree,fils->name);
+		  (*pos) += (int)strlen(fils->name);
+		}
+		}
+	      else if(tree->write_tax_names == NO)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,"%d",fils->num);
+		}
+	    }
+	      else if(OUTPUT_TREE_FORMAT == NEXUS)
+	    {
+	      (*pos) += sprintf(*s_tree+*pos,"%d",fils->num+1);
+	    }
+	      else
+	    {
+	      PhyML_Printf("\n. Unknown tree format.");
+	      PhyML_Printf("\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+	      PhyML_Printf("\n. s=%s\n",*s_tree);
+	    }
+
+	      if((fils->b) && (fils->b[0]) && (tree->write_br_lens == YES))
+	    {
+	      strcat(*s_tree,":");
+	      (*pos)++;
+
+	#if !(defined PHYTIME || defined INVITEE)
+	      if(!tree->n_root)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
+		}
+	      else
+		{
+		  if(pere == tree->n_root)
+		{
+		  phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
+		  (*pos) += sprintf(*s_tree+*pos,format,tree->e_root->l->v * root_pos);
+		}
+		  else
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
+		}
+		}
+	#else
+	      if(!tree->n_root)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[0]->l->v);
+		}
+	      else
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,tree->rates->cur_l[fils->num]);
+		}
+	#endif
+		}
+
+	      if(tree->write_labels)
+		{
+		  if(fils->b[0]->n_labels < 10)
+		    For(i,fils->b[0]->n_labels)
+		      {
+			(*pos) += sprintf(*s_tree+*pos,"::%s",fils->b[0]->labels[i]);
+		      }
+		  else
+		    {
+		      (*pos) += sprintf(*s_tree+*pos,"::%d_labels",fils->b[0]->n_labels);
+		    }
+		}
+
+
+	      strcat(*s_tree,",");
+	      (*pos)++;
+
+	      (*available) = (*available) - (*pos - ori_len);
+
+	      if(*available < 0)
+	    {
+	      PhyML_Fprintf(stderr,"\n. s=%s\n",*s_tree);
+	      PhyML_Fprintf(stderr,"\n. len=%d\n",strlen(*s_tree));
+	      PhyML_Fprintf(stderr,"\n. The sequence names in your input file might be too long.");
+	      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+	      Warn_And_Exit("");
+	    }
+
+	      if(*available < (int)T_MAX_NAME)
+	    {
+	      (*s_tree) = (char *)mRealloc(*s_tree,*pos+3*(int)T_MAX_NAME,sizeof(char));
+	      For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
+	      (*available) = 3*(int)T_MAX_NAME;
+	    }
+	/*       printf(" %s [%d,%d]",*s_tree,(int)strlen(*s_tree),*available); */
+	    }
+	  else
+	    {
+
+	      (*s_tree)[(*pos)]='(';
+	      (*s_tree)[(*pos)+1]='\0';
+	      (*pos)++;
+	      (*available)--;
+
+	      if(*available < (int)T_MAX_NAME/2)
+	    {
+	      (*s_tree) = (char *)mRealloc(*s_tree,*pos+(int)T_MAX_NAME,sizeof(char));
+	      (*available) = (int)T_MAX_NAME;
+	    }
+
+	      if(tree->n_root)
+	    {
+	      for(i=0;i<3;i++)
+		{
+		  if((fils->v[i] != pere) && (fils->b[i] != tree->e_root))
+		R_wtree_Custom(fils,fils->v[i],available,s_tree,pos,tree);
+		  else p=i;
+		}
+	    }
+	      else
+	    {
+	      for(i=0;i<3;i++)
+		{
+		  if(fils->v[i] != pere)
+		R_wtree_Custom(fils,fils->v[i],available,s_tree,pos,tree);
+		  else p=i;
+		}
+	    }
+
+	      ori_len = *pos;
+
+	      if(p < 0)
+	    {
+	      PhyML_Fprintf(stderr,"\n. fils=%p root=%p root->v[2]=%p root->v[1]=%p",fils,tree->n_root,tree->n_root->v[2],tree->n_root->v[1]);
+	      PhyML_Fprintf(stderr,"\n. tree->e_root=%p fils->b[0]=%p fils->b[1]=%p fils->b[2]=%p",tree->e_root,fils->b[0],fils->b[1],fils->b[2]);
+	      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	      Warn_And_Exit("");
+	    }
+
+	/*       printf("\n+ Writing on %p",*s_tree); */
+	      (*s_tree)[(*pos)-1] = ')';
+	      (*s_tree)[(*pos)]   = '\0';
+
+	      if((fils->b) && (tree->write_br_lens == YES))
+	    {
+	      if(tree->print_boot_val)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,"%d",fils->b[p]->bip_score);
+		}
+	      else if(tree->print_alrt_val)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,"%f",fils->b[p]->ratio_test);
+		}
+
+	      fflush(NULL);
+
+	      strcat(*s_tree,":");
+	      (*pos)++;
+
+	#if !(defined PHYTIME || defined INVITEE)
+	      if(!tree->n_root)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
+		}
+	      else
+		{
+		  if(pere == tree->n_root)
+		{
+		  phydbl root_pos = (fils == tree->n_root->v[2])?(tree->n_root_pos):(1.-tree->n_root_pos);
+		  (*pos) += sprintf(*s_tree+*pos,format,tree->e_root->l->v * root_pos);
+		}
+		  else
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
+		}
+		}
+	#else
+	      if(!tree->n_root)
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,fils->b[p]->l->v);
+		}
+	      else
+		{
+		  (*pos) += sprintf(*s_tree+*pos,format,tree->rates->cur_l[fils->num]);
+		}
+	#endif
+
+	    }
+
+	      if((tree->write_labels) && (fils->b[p]->labels != NULL))
+		{
+		  if(fils->b[p]->n_labels < 10)
+		    For(i,fils->b[p]->n_labels)
+		      {
+			(*pos) += sprintf(*s_tree+*pos,"::%s",fils->b[p]->labels[i]);
+		      }
+		  else
+		    {
+		      (*pos) += sprintf(*s_tree+*pos,"::%d_labels",fils->b[p]->n_labels);
+		    }
+		}
+
+	      strcat(*s_tree,",");
+	      (*pos)++;
+	      (*available) = (*available) - (*pos - ori_len);
+
+	      if(*available < 0)
+		{
+		  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+		  Warn_And_Exit("");
+		}
+
+	      if(*available < (int)T_MAX_NAME)
+	    {
+	      (*s_tree) = (char *)mRealloc(*s_tree,*pos+3*(int)T_MAX_NAME,sizeof(char));
+	      For(i,3*(int)T_MAX_NAME) (*s_tree)[(int)strlen(*s_tree)+i] = '\0';
+	      (*available) = 3*(int)T_MAX_NAME;
+	    }
+	/*       printf(" %s [%d,%d]",*s_tree,(int)strlen(*s_tree),*available); */
+	    }
+
+	  Free(format);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	void Detect_Align_File_Format(option *io)
+	{
+	  int c;
+	  fpos_t curr_pos;
+
+	  fgetpos(io->fp_in_align,&curr_pos);
+
+	  errno = 0;
+
+	  while((c=fgetc(io->fp_in_align)) != EOF)
+	    {
+	      if(errno) io->data_file_format = PHYLIP;
+	      else if(c == '#')
+		{
+		  char s[10],t[6]="NEXUS";
+		  if(!fgets(s,6,io->fp_in_align))
+		    {
+		      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+		      Exit("\n");
+		    }
+		  if(!strcmp(t,s))
+		    {
+		      fsetpos(io->fp_in_align,&curr_pos);
+		      io->data_file_format = NEXUS;
+		      return;
+		    }
+		}
+	    }  
+	  fsetpos(io->fp_in_align,&curr_pos);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	void Detect_Tree_File_Format(option *io)
+	{
+	  int c;
+	  fpos_t curr_pos;
+
+	  fgetpos(io->fp_in_tree,&curr_pos);
+
+	  errno = 0;
+
+	  while((c=fgetc(io->fp_in_tree)) != EOF)
+	    {
+	      if(errno)
+	    {
+	      io->tree_file_format = PHYLIP;
+	      PhyML_Printf("\n. Detected PHYLIP tree file format.");
+	    }
+	      else if(c == '#')
+	    {
+	      char s[10],t[6]="NEXUS";
+	      if(!fgets(s,6,io->fp_in_tree))
+		{
+		  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+		  Warn_And_Exit("");
+		}
+	      if(!strcmp(t,s))
+		{
+		  fsetpos(io->fp_in_tree,&curr_pos);
+		  io->tree_file_format = NEXUS;
+		  PhyML_Printf("\n. Detected NEXUS tree file format.");
+		  return;
+		}
+	    }
+	    }
+
+	  fsetpos(io->fp_in_tree,&curr_pos);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	align **Get_Seq(option *io)
+	{
+	  io->data = NULL;
+	  
+	  if(!io->fp_in_align)
+	    {
+	      PhyML_Fprintf(stderr,"\n. Filehandle to '%s' seems to be closed.",io->in_align_file);
+	      Exit("\n");
+	    }
+	  
+	  Detect_Align_File_Format(io);
+
+	  switch(io->data_file_format)
+	    {
+	    case PHYLIP:
+	      {
+		io->data = Get_Seq_Phylip(io);
+		break;
+	      }
+	    case NEXUS:
+	      {
+		io->nex_com_list = Make_Nexus_Com();
+		Init_Nexus_Format(io->nex_com_list);
+		Get_Nexus_Data(io->fp_in_align,io);
+		Free_Nexus(io);
+	    break;
+	      }
+	    default:
+	      {
+		PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+		Exit("\n");
+		break;
+	      }
+	    }
+	  
+	  if(!io->data)
+	    {
+	      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+	      Exit("\n");
+	    }
+	  else
+	    {
+	      Post_Process_Data(io);
+	    }
+
+
+	  return io->data;
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	void Post_Process_Data(option *io)
+	{
+	  int i,j,swap;
+	  align *data_buff;
+
+	  for(i=0;i<io->data[0]->len;++i)
+	    {
+	      for(j=0;j<io->n_otu;++j)
+		{
+		  if((io->data[j]->state[i] == '?') || (io->data[j]->state[i] == '-')) io->data[j]->state[i] = 'X';
+		  if((io->datatype == NT) && (io->data[j]->state[i] == 'N')) io->data[j]->state[i] = 'X';
+		  if(io->data[j]->state[i] == 'U') io->data[j]->state[i] = 'T';
+		}
+	    }
+
+	  for(i=0;i<io->n_otu;++i) io->data[i]->len = io->data[0]->len;
+
+	  /* Sequences are ordered alphabetically */
+	  data_buff = NULL;
+	  swap = TRUE;
+	  /* swap = FALSE; */
+	  while(swap == TRUE)
+	    {
+	      swap = FALSE;
+	      for(i=0;i<io->n_otu-1;i++)
+		{
+		  for(j=i+1;j<io->n_otu;j++)
+		    {
+		      if(strcmp(io->data[i]->name,io->data[j]->name) < 0)
+			{
+			  swap = TRUE;
+			  data_buff = io->data[i];
+			  io->data[i] = io->data[j];
+			  io->data[j] = data_buff;
+			}
+		    }
+		}
+	    }
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	/* align **Get_Seq_Nexus(option *io) */
+	/* { */
+	/*   char *s,*ori_s; */
+	/*   char *token; */
+	/*   int in_comment; */
+	/*   nexcom *curr_com; */
+	/*   nexparm *curr_parm; */
+	/*   int nxt_token_t,cur_token_t; */
+
+	/*   s = (char *)mCalloc(T_MAX_LINE,sizeof(char)); */
+	/*   token = (char *)mCalloc(T_MAX_TOKEN,sizeof(char)); */
+
+	/*   ori_s      = s; */
+	/*   in_comment = NO; */
+	/*   curr_com   = NULL; */
+	/*   curr_parm  = NULL; */
+	/*   nxt_token_t = NEXUS_COM;  */
+	/*   cur_token_t = -1;  */
+
+	/*   while(fgets(s,T_MAX_LINE,io->fp_in_align)) */
+	/*     {       */
+	/*       do */
+	/* 	{	   */
+	/* 	  Get_Token(&s,token);	   */
+
+	/* /\* 	  PhyML_Printf("\n. Token: '%s' next_token=%d cur_token=%d",token,nxt_token_t,cur_token_t); *\/ */
+
+	/* 	  if(token[0] == '\0') break; */
+
+	/* 	  if(token[0] == ';')  */
+	/* 	    { */
+	/* 	      curr_com   = NULL; */
+	/* 	      curr_parm  = NULL; */
+	/* 	      nxt_token_t = NEXUS_COM; */
+	/* 	      cur_token_t = -1; */
+	/* 	      break; /\* End of command *\/  */
+	/* 	    } */
+
+	/* 	  if(nxt_token_t == NEXUS_EQUAL)  */
+	/* 	    { */
+	/* 	      cur_token_t = NEXUS_VALUE; */
+	/* 	      nxt_token_t = NEXUS_PARM; */
+	/* 	      continue; */
+	/* 	    } */
+
+	/* 	  if((nxt_token_t == NEXUS_COM) && (cur_token_t != NEXUS_VALUE))  */
+	/* 	    { */
+	/* 	      Find_Nexus_Com(token,&curr_com,&curr_parm,io->nex_com_list); */
+	/* 	      if(curr_com)  */
+	/* 		{ */
+	/* 		  nxt_token_t = curr_com->nxt_token_t; */
+	/* 		  cur_token_t = curr_com->cur_token_t; */
+	/* 		} */
+	/* 	      if(cur_token_t != NEXUS_VALUE) continue; */
+	/* 	    } */
+
+	/* 	  if((nxt_token_t == NEXUS_PARM) && (cur_token_t != NEXUS_VALUE))  */
+	/* 	    { */
+	/* 	      Find_Nexus_Parm(token,&curr_parm,curr_com); */
+	/* 	      if(curr_parm)  */
+	/* 		{ */
+	/* 		  nxt_token_t = curr_parm->nxt_token_t; */
+	/* 		  cur_token_t = curr_parm->cur_token_t; */
+	/* 		} */
+	/* 	      if(cur_token_t != NEXUS_VALUE) continue; */
+	/* 	    } */
+
+	/* 	  if(cur_token_t == NEXUS_VALUE) */
+	/* 	    { */
+	/* 	      if((curr_parm->fp)(token,curr_parm,io))  /\* Read in parameter value *\/ */
+	/* 		{ */
+	/* 		  nxt_token_t = NEXUS_PARM; */
+	/* 		  cur_token_t = -1; */
+	/* 		} */
+	/* 	    } */
+	/* 	} */
+	/*       while(strlen(token) > 0); */
+	/*     } */
+
+	/*   Free(ori_s); */
+	/*   Free(token); */
+
+	/*   return io->data; */
+	/* } */
+
+	/* /\*********************************************************\/ */
+
+	void Get_Nexus_Data(FILE *fp, option *io)
+	{
+	  char *token;
+	  nexcom *curr_com;
+	  nexparm *curr_parm;
+	  int nxt_token_t,cur_token_t;
+
+	  token = (char *)mCalloc(T_MAX_TOKEN,sizeof(char));
+
+	  curr_com   = NULL;
+	  curr_parm  = NULL;
+	  nxt_token_t = NEXUS_COM;
+	  cur_token_t = -1;
+
+	  do
+	    {
+	      if(!Get_Token(fp,token)) break;
+
+	      /* PhyML_Printf("\n+ Token: '%s' next_token=%d cur_token=%d",token,nxt_token_t,cur_token_t); */
+
+	      if(token[0] == ';')
+		{
+		  curr_com    = NULL;
+		  curr_parm   = NULL;
+		  nxt_token_t = NEXUS_COM;
+		  cur_token_t = -1;
+		}
+	      
+	      if(nxt_token_t == NEXUS_EQUAL)
+		{
+		  cur_token_t = NEXUS_VALUE;
+		  nxt_token_t = NEXUS_PARM;
+		  continue;
+		}
+	      
+	      if((nxt_token_t == NEXUS_COM) && (cur_token_t != NEXUS_VALUE))
+		{
+		  Find_Nexus_Com(token,&curr_com,&curr_parm,io->nex_com_list);
+		  if(curr_com)
+		    {
+		      nxt_token_t = curr_com->nxt_token_t;
+		      cur_token_t = curr_com->cur_token_t;
+		    }
+		  if(cur_token_t != NEXUS_VALUE) continue;
+		}
+	      
+	      if((nxt_token_t == NEXUS_PARM) && (cur_token_t != NEXUS_VALUE))
+		{
+		  Find_Nexus_Parm(token,&curr_parm,curr_com);
+		  if(curr_parm)
+		    {
+		      nxt_token_t = curr_parm->nxt_token_t;
+		      cur_token_t = curr_parm->cur_token_t;
+		    }
+		  if(cur_token_t != NEXUS_VALUE) continue;
+		}
+	      
+	      if(cur_token_t == NEXUS_VALUE)
+		{
+		  if((curr_parm->fp)(token,curr_parm,io))  /* Read in parameter value */
+		    {
+		      nxt_token_t = NEXUS_PARM;
+		      cur_token_t = -1;
+		    }
+		}
+	    }
+	  while(strlen(token) > 0);
+	  
+	  Free(token);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+
+	int Get_Token(FILE *fp, char *token)
+	{
+	  char c;
+
+	  c = ' ';
+
+	  while(c == ' ' || c == '\t' || c == '\n' || c == '\r')
+	    {
+	      c = fgetc(fp);
+	      if(c == EOF) return 0;
+	    }
+	  
+	  if(c == '"')
+	    {
+	      do
+		{
+		  *token = c;
+		  token++;
+		  c = fgetc(fp);
+		  if(c == EOF) return 0;
+		}
+	      while(c != '"');
+	      *token = c;
+	      /* c = fgetc(fp); */
+	      if(c == EOF) return 0;
+	      *(token+1) = '\0';
+	      return 1;
+	    }
+	  
+	  if(c == '[')
+	    {
+	      Skip_Comment(fp);
+	      c = fgetc(fp);
+	      *token = c;
+	      token++;
+	      if(c == EOF) return 0;
+	      return 1;
+	    }
+
+	  if(c == '#')      { *token = c; token++; }
+	  else if(c == ';') { *token = c; token++; }
+	  else if(c == ',') { *token = c; token++; }
+	  else if(c == '.') { *token = c; token++; }
+	  else if(c == '=') { *token = c; token++; }
+	  else if(c == '(') { *token = c; token++; }
+	  else if(c == ')') { *token = c; token++; }
+	  else if(c == '{') { *token = c; token++; }
+	  else if(c == '}') { *token = c; token++; }
+	  else if(c == '?') { *token = c; token++; }
+	  else if(c == '-') { *token = c; token++; }
+	  else
+	    {
+	      while(isgraph(c) && c != ';' && c != '-' && c != ',' && c != '=')
+		{
+		  *(token++) = c;
+		  c = fgetc(fp);
+		  if(c == EOF) return 0;
+		}
+	      
+	      fseek(fp,-1*sizeof(char),SEEK_CUR);
+
+	    }
+	  *token = '\0';
+	  return 1;
+	}
+
+
+	/* void Get_Token(char *line, char *token) */
+	/* { */
+	/*   while(**line == ' ' || **line == '\t') (*line)++; */
+
+
+	/*   if(**line == '"')  */
+	/*     { */
+	/*       do { *token = **line; (*line)++; token++; } while(**line != '"'); */
+	/*       *token = **line; */
+	/*       (*line)++; */
+	/*       *(token+1) = '\0'; */
+	/*       return; */
+	/*     } */
+
+	/*   if(**line == '[')  */
+	/*     { */
+	/*       int in_comment; */
+
+	/*       in_comment = 1; */
+	/*       do  */
+	/* 	{  */
+	/* 	  (*line)++;  */
+	/* 	  if(**line == '[')  */
+	/* 	    { */
+	/* 	      in_comment++; */
+	/* 	    } */
+	/* 	  else if(**line == ']') in_comment--;	   */
+	/* 	} */
+	/*       while(in_comment); */
+	/*       (*line)++; */
+	/*       return; */
+	/*     } */
+
+
+	/*   if(**line == '#')      {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == ';') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == ',') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '.') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '=') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '(') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == ')') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '{') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '}') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '?') {*token = **line; (*line)++; token++; } */
+	/*   else if(**line == '-') {*token = **line; (*line)++; token++; } */
+	/*   else */
+	/*     { */
+	/*       while(isgraph(**line) && **line != ';' && **line != '=' && **line != ',')  */
+	/* 	{ */
+	/* 	  *(token++) = **line; */
+	/* 	  (*line)++;  */
+	/* 	} */
+	/*     } */
+	/*   *token = '\0'; */
+	/* } */
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	align **Get_Seq_Phylip(option *io)
+	{
+	  Read_Ntax_Len_Phylip(io->fp_in_align,&io->n_otu,&io->init_len);
+
+	  if(io->n_otu > N_MAX_OTU)
+	    {
+	      PhyML_Fprintf(stderr,"\n. The number of taxa should not exceed %d",N_MAX_OTU);
+	      Exit("\n");
+	    }
+	  
+	  if(io->interleaved) io->data = Read_Seq_Interleaved(io);
+	  else                io->data = Read_Seq_Sequential(io);
+
+	  return io->data;
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	void Read_Ntax_Len_Phylip(FILE *fp ,int *n_otu, int *n_tax)
+	{
+	  char *line;
+	  int readok;
+
+	  line = (char *)mCalloc(T_MAX_LINE,sizeof(char));
+
+	  readok = 0;
+	  do
+	    {
+	      if(fscanf(fp,"%s",line) == EOF)
+		{
+		  Free(line);
+		  PhyML_Fprintf(stderr,"\n. PhyML can't read in this alignment.");
+		  PhyML_Fprintf(stderr,"\n. Could it be that sequence file is empty?");
+		  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+		  Exit("\n");
+		}
+	      else
+		{
+		  if(strcmp(line,"\n") && strcmp(line,"\r") && strcmp(line,"\t"))
+		    {
+		      sscanf(line,"%d",n_otu);
+		      if(*n_otu <= 0) Warn_And_Exit("\n. The number of taxa cannot be negative.\n");
+		      
+		      if(!fscanf(fp,"%s",line)) Exit("\n");
+		      sscanf(line,"%d",n_tax);
+		      if(*n_tax <= 0) Warn_And_Exit("\n. The sequence length cannot be negative.\n");
+		      else readok = 1;
+		    }
+		}
+	    }while(!readok);
+
+	  Free(line);
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	align **Read_Seq_Sequential(option *io)
+	{
+	  int i;
+	  char *line;
+	  align **data;
+	/*   char c; */
+	  char *format;
+
+	  format = (char *)mCalloc(T_MAX_NAME,sizeof(char));
+	  line   = (char *)mCalloc(T_MAX_LINE,sizeof(char));
+	  data   = (align **)mCalloc(io->n_otu,sizeof(align *));
+
+	/*   while((c=fgetc(in))!='\n'); */
+	 /*  while(((c=fgetc(io->fp_in_align))!='\n') && (c != ' ') && (c != '\r') && (c != '\t')); */
+	  
+	  sprintf(format, "%%%ds", T_MAX_NAME);
+
+
+	  for(i=0;i<io->n_otu;i++)
+	    {
+	      data[i]        = (align *)mCalloc(1,sizeof(align));
+	      data[i]->name  = (char *)mCalloc(T_MAX_NAME,sizeof(char));
+	      data[i]->state = (char *)mCalloc(io->init_len*io->state_len+1,sizeof(char));
+
+	      data[i]->is_ambigu = NULL;
+	      data[i]->len = 0;
+
+	      if(!fscanf(io->fp_in_align,format,data[i]->name)) Exit("\n");
+
+	      Check_Sequence_Name(data[i]->name);
+
+	      while(data[i]->len < io->init_len * io->state_len) assert(Read_One_Line_Seq(&data,i,io->fp_in_align));
+
+	      if(data[i]->len != io->init_len * io->state_len)
+		{
+		  PhyML_Fprintf(stderr,"\n. Err. Problem with species %s's sequence (check the format).\n",data[i]->name);
+		  PhyML_Fprintf(stderr,"\n. Observed sequence length: %d, expected length: %d\n",data[i]->len, io->init_len * io->state_len);
+		  Warn_And_Exit("");
+		}
+	    }
+
+	  for(i=0;i<io->n_otu;i++) data[i]->state[data[i]->len] = '\0';
+
+	  Restrict_To_Coding_Position(data,io);
+
+	  Free(format);
+	  Free(line);
+
+	  return data;
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	align **Read_Seq_Interleaved(option *io)
+	{
+	  int i,end,num_block;
+	  char *line;
+	  align **data;
+	/*   char c; */
+	  char *format;
+	  fpos_t curr_pos;
+
+	  line   = (char *)mCalloc(T_MAX_LINE,sizeof(char));
+	  format = (char *)mCalloc(T_MAX_NAME, sizeof(char));
+	  data   = (align **)mCalloc(io->n_otu,sizeof(align *));
+
+	/*   while(((c=fgetc(io->fp_in_align))!='\n') && (c != ' ') && (c != '\r') && (c != '\t')); */
+
+	  sprintf(format, "%%%ds", T_MAX_NAME);
+
+	  end = 0;
+	  for(i=0;i<io->n_otu;i++)
+	    {
+	      data[i]        = (align *)mCalloc(1,sizeof(align));
+	      data[i]->name  = (char *)mCalloc(T_MAX_NAME,sizeof(char));
+	      data[i]->state = (char *)mCalloc(io->init_len*io->state_len+1,sizeof(char));
+	      
+	      data[i]->len       = 0;
+	      data[i]->is_ambigu = NULL;
+	      
+	      if(!fscanf(io->fp_in_align,format,data[i]->name)) Exit("\n");
+	      
+	      Check_Sequence_Name(data[i]->name);
+	      
+	      if(!Read_One_Line_Seq(&data,i,io->fp_in_align))
+		{
+		  end = 1;
+		  if((i != io->n_otu) && (i != io->n_otu-1))
+		    {
+		      PhyML_Fprintf(stderr,"\n. i:%d n_otu:%d",i,io->n_otu);
+		      PhyML_Fprintf(stderr,"\n. Err.: problem with species %s's sequence.\n",data[i]->name);
+		      PhyML_Fprintf(stderr,"\n. Observed sequence length: %d, expected length: %d\n",data[i]->len, io->init_len * io->state_len);
+		      Exit("");
+		    }
+		  break;
+		}
+	    }
+	  
+	  if(data[0]->len == io->init_len * io->state_len) end = 1;
+
+	/*   if(end) printf("\n. finished yet '%c'\n",fgetc(io->fp_in_align)); */
+	  if(!end)
+	    {
+	      end = 0;
+	      num_block = 1;
+	      do
+		{
+		  num_block++;
+		  
+		  /* interblock */
+		  if(!fgets(line,T_MAX_LINE,io->fp_in_align)) break;
+	 
+		  if(line[0] != 13 && line[0] != 10)
+		    {
+		      PhyML_Fprintf(stderr,"\n. Err.: one or more missing sequences in block %d.\n",num_block-1);
+		      Exit("");
+		    }
+		  
+		  for(i=0;i<io->n_otu;i++) if(data[i]->len != io->init_len * io->state_len) break;
+		  
+		  if(i == io->n_otu) break;
+		  
+		  for(i=0;i<io->n_otu;i++)
+		    {
+		      /* Skip the taxon name, if any, in this interleaved block */
+		      fgetpos(io->fp_in_align,&curr_pos);
+		      if(!fscanf(io->fp_in_align,format,line))
+			{
+			  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
+			  Warn_And_Exit("");
+			}
+		      if(line && strcmp(line,data[i]->name)) fsetpos(io->fp_in_align,&curr_pos);
+		      
+		      if(data[i]->len > io->init_len * io->state_len)
+			{
+			  PhyML_Fprintf(stderr,"\n. Observed sequence length=%d expected length=%d.\n",data[i]->len,io->init_len * io->state_len);
+			  PhyML_Fprintf(stderr,"\n. Err.: Problem with species %s's sequence.\n",data[i]->name);
+			  Exit("");
+			}
+		      else if(!Read_One_Line_Seq(&data,i,io->fp_in_align))
+			{
+			  end = 1;
+			  if((i != io->n_otu) && (i != io->n_otu-1))
+			    {
+			      PhyML_Fprintf(stderr,"\n. Err.: Problem with species %s's sequence.\n",data[i]->name);
+			      PhyML_Fprintf(stderr,"\n. Observed sequence length: %d, expected length: %d.\n",data[i]->len, io->init_len * io->state_len);
+			      Exit("");
+			    }
+			  break;
+			}
+		    }
+		}while(!end);
+	    }
+	  
+	  for(i=0;i<io->n_otu;i++) data[i]->state[data[i]->len] = '\0';
+
+	  for(i=0;i<io->n_otu;i++)
+	    {
+	      if(data[i]->len != io->init_len * io->state_len)
+		{
+		  PhyML_Fprintf(stderr,"\n. Check sequence '%s' length (expected length: %d, observed length: %d) [OTU %d].\n",data[i]->name,io->init_len,data[i]->len,i+1);
+		  Exit("");
+		}
+	    }
+	  
+	  Restrict_To_Coding_Position(data,io);
+
+	  Free(format);
+	  Free(line);
+
+	  return data;
+	}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+	int Read_One_Line_Seq(align ***data, int num_otu, FILE *in)
+	{
+	  char c = ' ';
+	  int nchar = 0;
+
+	  while(1)
+	    {
+	/*       if((c == EOF) || (c == '\n') || (c == '\r')) break; */
+
+	      if((c == 13) || (c == 10))
+		{
+		  /* PhyML_Printf("[%d %d]\n",c,nchar); fflush(NULL); */
+		  if(!nchar)
+		    {
+		      c=(char)fgetc(in);
+		      continue;
+		    }
+		  else
+		    {
+		      /* PhyML_Printf("break\n"); */
+		      break;
+		    }
+		}
+	      else if(c == EOF)
+		{
+		  /* PhyML_Printf("EOL\n"); */
+		  break;
+		}
+	      else if((c == ' ') || (c == '\t') || (c == 32))
+		{
+		  /* PhyML_Printf("[%d]",c); */
+		  c=(char)fgetc(in);
+		  continue;
+		}
+	      
+	      nchar++;
+	      Uppercase(&c);
+
+	      if(c == '.')
+		{
+		  c = (*data)[0]->state[(*data)[num_otu]->len];
+		  if(!num_otu)
+		    c = 'N'; // bowhan: allow . in the first sequence (for MUSCLE), but with N, it won't cause any false positive for CRISPR design 
+		    // Warn_And_Exit("\n== Err: Symbol \".\" should not appear in the first sequence\n");
         }
       (*data)[num_otu]->state[(*data)[num_otu]->len]=c;
       (*data)[num_otu]->len++;
@@ -1908,7 +1920,7 @@ int Read_One_Line_Seq(align ***data, int num_otu, FILE *in)
       if(c == ';') break;
     }
 
-  /* printf("\n\u2022 Exit nchar: %d [%d]\n",nchar,c==EOF); */
+  /* printf("\n. Exit nchar: %d [%d]\n",nchar,c==EOF); */
   if(c == EOF) return 0;
   else return 1;
 }
@@ -1916,73 +1928,6 @@ int Read_One_Line_Seq(align ***data, int num_otu, FILE *in)
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 
-t_tree *Read_Tree_File(option *io)
-{
-  t_tree *tree;
-
-  assert(io->fp_in_tree);
-
-  Detect_Tree_File_Format(io);
-
-  io->treelist->list_size = 0;
-
-  switch(io->tree_file_format)
-    {
-    case PHYLIP:
-      {
-        do
-          {
-            io->treelist->tree = (t_tree **)realloc(io->treelist->tree,(io->treelist->list_size+1)*sizeof(t_tree *));
-            io->tree = Read_Tree_File_Phylip(io->fp_in_tree);
-            fclose(io->fp_in_tree);
-            io->fp_in_tree = NULL;
-            if(!io->tree) break;
-            if(io->treelist->list_size > 1) PhyML_Printf("\n\u2022 Reading tree %d",io->treelist->list_size+1);
-            io->treelist->tree[io->treelist->list_size] = io->tree;
-            io->treelist->list_size++;
-          }while(io->tree);
-        break;
-      }
-    case NEXUS:
-      {
-        io->nex_com_list = Make_Nexus_Com();
-        Init_Nexus_Format(io->nex_com_list);
-        Get_Nexus_Data(io->fp_in_tree,io);
-        fclose(io->fp_in_tree);
-        io->fp_in_tree = NULL;
-        Free_Nexus(io);
-        break;
-      }
-    default:
-      {
-        PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-        Warn_And_Exit("");
-        break;
-      }
-    }
-  
-  if(!io->long_tax_names)
-    {
-      int i;
-      
-      tree = io->treelist->tree[0];
-      
-      io->long_tax_names  = (char **)mCalloc(tree->n_otu,sizeof(char *));
-      io->short_tax_names = (char **)mCalloc(tree->n_otu,sizeof(char *));
-      
-      for(i=0;i<tree->n_otu;i++)
-        {
-          io->long_tax_names[i] = (char *)mCalloc(strlen(tree->a_nodes[i]->name)+1,sizeof(char));
-          io->short_tax_names[i] = (char *)mCalloc(strlen(tree->a_nodes[i]->name)+1,sizeof(char));
-          strcpy(io->long_tax_names[i],tree->a_nodes[i]->name);
-          strcpy(io->short_tax_names[i],tree->a_nodes[i]->name);
-        }
-    }
-  return NULL;
-}
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
 
 scalar_dbl *Read_Io_Weights(option *io)
 {
@@ -2030,7 +1975,7 @@ char *Return_Tree_String_Phylip(FILE *fp_input_tree)
 
   if(fp_input_tree == NULL)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -2125,7 +2070,7 @@ void Print_Site_Lk(t_tree *tree, FILE *fp)
 
   if(!tree->io->print_site_lnl)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Exit("");
     }
 
@@ -2256,12 +2201,13 @@ void Print_Seq(FILE *fp, align **data, int n_otu)
   PhyML_Fprintf(fp,"%d\t%d\n",n_otu,data[0]->len);
   for(i=0;i<n_otu;i++)
     {
-      for(j=0;j<20;j++)
-        {
-          if(j<(int)strlen(data[i]->name))
-            fputc(data[i]->name[j],fp);
-          else fputc(' ',fp);
-        }
+      PhyML_Fprintf(fp,"%s\t",data[i]->name);
+      /* for(j=0;j<20;j++) */
+      /*   { */
+      /*     if(j<(int)strlen(data[i]->name)) */
+      /*       fputc(data[i]->name[j],fp); */
+      /*     else fputc(' ',fp); */
+      /*   } */
       /*       PhyML_Printf("%10d  ",i); */
       For(j,data[i]->len)
         {
@@ -2523,36 +2469,36 @@ void Print_Model(t_mod *mod)
 {
   int i,j,k;
 
-  PhyML_Printf("\n\u2022 name=%s",mod->modelname->s);
-  PhyML_Printf("\n\u2022 string=%s",mod->custom_mod_string);
-  PhyML_Printf("\n\u2022 mod_num=%d",mod->mod_num);
-  PhyML_Printf("\n\u2022 ns=%d",mod->ns);
-  PhyML_Printf("\n\u2022 n_catg=%d",mod->ras->n_catg);
-  PhyML_Printf("\n\u2022 kappa=%f",mod->kappa->v);
-  PhyML_Printf("\n\u2022 alpha=%f",mod->ras->alpha->v);
-  PhyML_Printf("\n\u2022 lambda=%f",mod->lambda->v);
-  PhyML_Printf("\n\u2022 pinvar=%f",mod->ras->pinvar->v);
-  PhyML_Printf("\n\u2022 br_len_mult=%f",mod->br_len_mult->v);
-  PhyML_Printf("\n\u2022 whichmodel=%d",mod->whichmodel);
-  PhyML_Printf("\n\u2022 update_eigen=%d",mod->update_eigen);
-  PhyML_Printf("\n\u2022 bootstrap=%d",mod->bootstrap);
-  PhyML_Printf("\n\u2022 n_diff_rr=%d",mod->r_mat->n_diff_rr);
-  PhyML_Printf("\n\u2022 invar=%d",mod->ras->invar);
-  PhyML_Printf("\n\u2022 use_m4mod=%d",mod->use_m4mod);
-  PhyML_Printf("\n\u2022 gamma_median=%d",mod->ras->gamma_median);
-  PhyML_Printf("\n\u2022 state_len=%d",mod->io->state_len);
-  PhyML_Printf("\n\u2022 log_l=%d",mod->log_l);
-  PhyML_Printf("\n\u2022 l_min=%f",mod->l_min);
-  PhyML_Printf("\n\u2022 l_max=%f",mod->l_max);
-  PhyML_Printf("\n\u2022 free_mixt_rates=%d",mod->ras->free_mixt_rates);
-  PhyML_Printf("\n\u2022 gamma_mgf_bl=%d",mod->gamma_mgf_bl);
+  PhyML_Printf("\n. name=%s",mod->modelname->s);
+  PhyML_Printf("\n. string=%s",mod->custom_mod_string);
+  PhyML_Printf("\n. mod_num=%d",mod->mod_num);
+  PhyML_Printf("\n. ns=%d",mod->ns);
+  PhyML_Printf("\n. n_catg=%d",mod->ras->n_catg);
+  PhyML_Printf("\n. kappa=%f",mod->kappa->v);
+  PhyML_Printf("\n. alpha=%f",mod->ras->alpha->v);
+  PhyML_Printf("\n. lambda=%f",mod->lambda->v);
+  PhyML_Printf("\n. pinvar=%f",mod->ras->pinvar->v);
+  PhyML_Printf("\n. br_len_mult=%f",mod->br_len_mult->v);
+  PhyML_Printf("\n. whichmodel=%d",mod->whichmodel);
+  PhyML_Printf("\n. update_eigen=%d",mod->update_eigen);
+  PhyML_Printf("\n. bootstrap=%d",mod->bootstrap);
+  PhyML_Printf("\n. n_diff_rr=%d",mod->r_mat->n_diff_rr);
+  PhyML_Printf("\n. invar=%d",mod->ras->invar);
+  PhyML_Printf("\n. use_m4mod=%d",mod->use_m4mod);
+  PhyML_Printf("\n. gamma_median=%d",mod->ras->gamma_median);
+  PhyML_Printf("\n. state_len=%d",mod->io->state_len);
+  PhyML_Printf("\n. log_l=%d",mod->log_l);
+  PhyML_Printf("\n. l_min=%f",mod->l_min);
+  PhyML_Printf("\n. l_max=%f",mod->l_max);
+  PhyML_Printf("\n. free_mixt_rates=%d",mod->ras->free_mixt_rates);
+  PhyML_Printf("\n. gamma_mgf_bl=%d",mod->gamma_mgf_bl);
 
-  PhyML_Printf("\n\u2022 Pi\n");
+  PhyML_Printf("\n. Pi\n");
   for(i=0;i<mod->ns;i++) PhyML_Printf(" %f ",mod->e_frq->pi->v[i]);
   PhyML_Printf("\n");
   for(i=0;i<mod->ns;i++) PhyML_Printf(" %f ",mod->e_frq->pi_unscaled->v[i]);
 
-  PhyML_Printf("\n\u2022 Rates\n");
+  PhyML_Printf("\n. Rates\n");
   for(i=0;i<mod->ras->n_catg;i++) PhyML_Printf(" %f ",mod->ras->gamma_r_proba->v[i]);
   PhyML_Printf("\n");
   for(i=0;i<mod->ras->n_catg;i++) PhyML_Printf(" %f ",mod->ras->gamma_r_proba_unscaled->v[i]);
@@ -2563,7 +2509,7 @@ void Print_Model(t_mod *mod)
 
 
 
-  PhyML_Printf("\n\u2022 Qmat \n");
+  PhyML_Printf("\n. Qmat \n");
   if(mod->whichmodel == CUSTOM)
     {
       fflush(NULL);
@@ -2580,7 +2526,7 @@ void Print_Model(t_mod *mod)
       PhyML_Printf("\n");
     }
 
-  PhyML_Printf("\n\u2022 Freqs");
+  PhyML_Printf("\n. Freqs");
   PhyML_Printf("\n");
   for(i=0;i<mod->ns;i++) PhyML_Printf(" %12f ",mod->e_frq->user_b_freq->v[i]);
   PhyML_Printf("\n");
@@ -2588,7 +2534,7 @@ void Print_Model(t_mod *mod)
   PhyML_Printf("\n");
   for(i=0;i<mod->ns;i++) PhyML_Printf(" %12f ",mod->e_frq->pi_unscaled->v[i]);
 
-  PhyML_Printf("\n\u2022 Eigen\n");
+  PhyML_Printf("\n. Eigen\n");
   For(i,2*mod->ns)       PhyML_Printf(" %f ",mod->eigen->space[i]);
   PhyML_Printf("\n");
   For(i,2*mod->ns)       PhyML_Printf(" %f ",mod->eigen->space_int[i]);
@@ -2606,11 +2552,11 @@ void Print_Model(t_mod *mod)
   For(i,mod->ns*mod->ns) PhyML_Printf(" %f ",mod->eigen->q[i]);
   PhyML_Printf("\n");
 
-  PhyML_Printf("\n\u2022 Pij");
+  PhyML_Printf("\n. Pij");
   for(k=0;k<mod->ras->n_catg;k++)
     {
       PMat(0.01*mod->ras->gamma_rr->v[k],mod,mod->ns*mod->ns*k,mod->Pij_rr->v,NULL);
-      PhyML_Printf("\n\u2022 l=%f\n",0.01*mod->ras->gamma_rr->v[k]);
+      PhyML_Printf("\n. l=%f\n",0.01*mod->ras->gamma_rr->v[k]);
       for(i=0;i<mod->ns;i++)
         {
           PhyML_Printf("  ");
@@ -2674,7 +2620,7 @@ FILE *Openfile(char *filename, int mode)
       {
         while(!(fp = (FILE *)fopen(s,"r")) && ++open_test<10)
           {
-            PhyML_Printf("\n\u2022 Can't open file '%s', enter a new name : ",s);
+            PhyML_Printf("\n. Can't open file '%s', enter a new name : ",s);
             Getstring_Stdin(s);
           }
         break;
@@ -2719,21 +2665,21 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
       Print_Banner_Small(fp_out);
     }
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Sequence filename: \t\t\t%s", Basename(io->in_align_file));
-  PhyML_Fprintf(fp_out,"\n\u2022 Data set: \t\t\t\t#%d",n_data_set);
+  PhyML_Fprintf(fp_out,"\n. Sequence filename: \t\t\t%s", Basename(io->in_align_file));
+  PhyML_Fprintf(fp_out,"\n. Data set: \t\t\t\t#%d",n_data_set);
 
-  if(io->mod->s_opt->random_input_tree) PhyML_Fprintf(fp_out,"\n\u2022 Random init tree: \t\t\t#%d",num_tree+1);
-  else if(io->n_trees > 1)              PhyML_Fprintf(fp_out,"\n\u2022 Starting tree number: \t\t#%d",num_tree+1);
+  if(io->mod->s_opt->random_input_tree) PhyML_Fprintf(fp_out,"\n. Random init tree: \t\t\t#%d",num_tree+1);
+  else if(io->n_trees > 1)              PhyML_Fprintf(fp_out,"\n. Starting tree number: \t\t#%d",num_tree+1);
 
   if(io->mod->s_opt->opt_topo)
     {
-      if(io->mod->s_opt->topo_search == NNI_MOVE) PhyML_Fprintf(fp_out,"\n\u2022 Tree topology search : \t\tNNIs");
-      else if(io->mod->s_opt->topo_search == SPR_MOVE) PhyML_Fprintf(fp_out,"\n\u2022 Tree topology search : \t\tSPRs");
-      else if(io->mod->s_opt->topo_search == BEST_OF_NNI_AND_SPR) PhyML_Fprintf(fp_out,"\n\u2022 Tree topology search : \t\tBest of NNIs and SPRs");
+      if(io->mod->s_opt->topo_search == NNI_MOVE) PhyML_Fprintf(fp_out,"\n. Tree topology search : \t\tNNIs");
+      else if(io->mod->s_opt->topo_search == SPR_MOVE) PhyML_Fprintf(fp_out,"\n. Tree topology search : \t\tSPRs");
+      else if(io->mod->s_opt->topo_search == BEST_OF_NNI_AND_SPR) PhyML_Fprintf(fp_out,"\n. Tree topology search : \t\tBest of NNIs and SPRs");
     }
   else
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Tree topology: \t\t\tfixed");
+      PhyML_Fprintf(fp_out,"\n. Tree topology: \t\t\tfixed");
     }
 
 
@@ -2754,41 +2700,41 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
         strcat(s,"random tree");
     }
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Initial tree: \t\t\t%s",s);
+  PhyML_Fprintf(fp_out,"\n. Initial tree: \t\t\t%s",s);
   Free(s);
 
   if(tree->io->datatype == NT)
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Model of nucleotides substitution: \t%s",tree->mod->modelname->s);
+      PhyML_Fprintf(fp_out,"\n. Model of nucleotides substitution: \t%s",tree->mod->modelname->s);
       if(io->mod->whichmodel == CUSTOM)
       PhyML_Fprintf(fp_out," (%s)",io->mod->custom_mod_string);
     }
   else if(tree->io->datatype == AA)
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Model of amino acids substitution: \t%s",tree->mod->modelname->s);
+      PhyML_Fprintf(fp_out,"\n. Model of amino acids substitution: \t%s",tree->mod->modelname->s);
       if(io->mod->whichmodel == CUSTOMAA) PhyML_Fprintf(fp_out," (%s)",tree->mod->aa_rate_mat_file->s);
     }
   else
     {
-      fprintf(fp_out,"\n\u2022 Substitution model: \t\t\t%s",tree->mod->modelname->s);
+      fprintf(fp_out,"\n. Substitution model: \t\t\t%s",tree->mod->modelname->s);
     }
 
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Number of taxa: \t\t\t%d",tree->n_otu);/*added FLT*/
+  PhyML_Fprintf(fp_out,"\n. Number of taxa: \t\t\t%d",tree->n_otu);/*added FLT*/
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Log-likelihood: \t\t\t%.5f",tree->c_lnL);/*was last ; moved here FLT*/
+  PhyML_Fprintf(fp_out,"\n. Log-likelihood: \t\t\t%.5f",tree->c_lnL);/*was last ; moved here FLT*/
 
   Unconstraint_Lk(tree);
-  PhyML_Fprintf(fp_out,"\n\u2022 Unconstrained likelihood: \t\t%.5f",tree->unconstraint_lk);
+  PhyML_Fprintf(fp_out,"\n. Unconstrained likelihood: \t\t%.5f",tree->unconstraint_lk);
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Parsimony: \t\t\t\t%d",tree->c_pars);
+  PhyML_Fprintf(fp_out,"\n. Parsimony: \t\t\t\t%d",tree->c_pars);
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Tree size: \t\t\t\t%.5f",Get_Tree_Size(tree));
+  PhyML_Fprintf(fp_out,"\n. Tree size: \t\t\t\t%.5f",Get_Tree_Size(tree));
 
   /* if(tree->mod->ras->n_catg > 1 && tree->mod->ras->free_mixt_rates == NO) */
   if(tree->mod->ras->free_mixt_rates == NO)
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Discrete gamma model: \t\t%s","Yes");
+      PhyML_Fprintf(fp_out,"\n. Discrete gamma model: \t\t%s","Yes");
       PhyML_Fprintf(fp_out,"\n  - Number of classes: \t\t\t%d",tree->mod->ras->n_catg);
       PhyML_Fprintf(fp_out,"\n  - Gamma shape parameter: \t\t%.3f",tree->mod->ras->alpha->v);
       for(i=0;i<tree->mod->ras->n_catg;i++)
@@ -2800,7 +2746,7 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
     {
       int *rk;
       rk = Ranks(tree->mod->ras->gamma_rr->v,tree->mod->ras->n_catg);
-      PhyML_Fprintf(fp_out,"\n\u2022 FreeRate model: \t\t\t%s","Yes");
+      PhyML_Fprintf(fp_out,"\n. FreeRate model: \t\t\t%s","Yes");
       PhyML_Fprintf(fp_out,"\n  - Number of classes: \t\t\t%d",tree->mod->ras->n_catg);
       for(i=0;i<tree->mod->ras->n_catg;i++)
         {
@@ -2809,26 +2755,26 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
       Free(rk);
     }
 
-  if(tree->mod->ras->invar) PhyML_Fprintf(fp_out,"\n\u2022 Proportion of invariant: \t\t%.3f",tree->mod->ras->pinvar->v);
+  if(tree->mod->ras->invar) PhyML_Fprintf(fp_out,"\n. Proportion of invariant: \t\t%.3f",tree->mod->ras->pinvar->v);
 
-  if(tree->mod->gamma_mgf_bl == YES) PhyML_Fprintf(fp_out,"\n\u2022 Variance of branch lengths: \t\t%f",tree->mod->l_var_sigma);
+  if(tree->mod->gamma_mgf_bl == YES) PhyML_Fprintf(fp_out,"\n. Variance of branch lengths: \t\t%f",tree->mod->l_var_sigma);
 
   /*was before Discrete gamma model ; moved here FLT*/
   if((tree->mod->whichmodel == K80)   ||
      (tree->mod->whichmodel == HKY85) ||
      (tree->mod->whichmodel == F84))
-    PhyML_Fprintf(fp_out,"\n\u2022 Transition/transversion ratio: \t%.3f",tree->mod->kappa->v);
+    PhyML_Fprintf(fp_out,"\n. Transition/transversion ratio: \t%.3f",tree->mod->kappa->v);
   else if(tree->mod->whichmodel == TN93)
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Transition/transversion ratio for purines: \t\t%.3f",
+      PhyML_Fprintf(fp_out,"\n. Transition/transversion ratio for purines: \t\t%.3f",
             tree->mod->kappa->v*2.*tree->mod->lambda->v/(1.+tree->mod->lambda->v));
-      PhyML_Fprintf(fp_out,"\n\u2022 Transition/transversion ratio for pyrimidines: \t%.3f",
+      PhyML_Fprintf(fp_out,"\n. Transition/transversion ratio for pyrimidines: \t%.3f",
           tree->mod->kappa->v*2./(1.+tree->mod->lambda->v));
     }
 
   if(tree->io->datatype == NT)
     {
-      PhyML_Fprintf(fp_out,"\n\u2022 Nucleotides frequencies:");
+      PhyML_Fprintf(fp_out,"\n. Nucleotides frequencies:");
       PhyML_Fprintf(fp_out,"\n  - f(A)=%8.5f",tree->mod->e_frq->pi->v[0]);
       PhyML_Fprintf(fp_out,"\n  - f(C)=%8.5f",tree->mod->e_frq->pi->v[1]);
       PhyML_Fprintf(fp_out,"\n  - f(G)=%8.5f",tree->mod->e_frq->pi->v[2]);
@@ -2857,7 +2803,7 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
       PhyML_Fprintf(fp_out,"  G <-> T   %8.5f\n",tree->mod->r_mat->rr->v[5]);
 
 
-      PhyML_Fprintf(fp_out,"\n\u2022 Instantaneous rate matrix : ");
+      PhyML_Fprintf(fp_out,"\n. Instantaneous rate matrix : ");
       PhyML_Fprintf(fp_out,"\n  [A---------C---------G---------T------]\n");
       for(i=0;i<4;i++)
     {
@@ -2882,17 +2828,17 @@ void Print_Fp_Out(FILE *fp_out, time_t t_beg, time_t t_end, t_tree *tree, option
 
 
   PhyML_Fprintf(fp_out,"\n");
-  PhyML_Fprintf(fp_out,"\n\u2022 Run ID:\t\t\t\t%s", (io->append_run_ID) ? (io->run_id_string): ("none"));
-  PhyML_Fprintf(fp_out,"\n\u2022 Random seed:\t\t\t\t%d", io->r_seed);
-  PhyML_Fprintf(fp_out,"\n\u2022 Subtree patterns aliasing:\t\t%s",io->do_alias_subpatt?"yes":"no");
-  PhyML_Fprintf(fp_out,"\n\u2022 Version:\t\t\t\t%s", VERSION);
+  PhyML_Fprintf(fp_out,"\n. Run ID:\t\t\t\t%s", (io->append_run_ID) ? (io->run_id_string): ("none"));
+  PhyML_Fprintf(fp_out,"\n. Random seed:\t\t\t\t%d", io->r_seed);
+  PhyML_Fprintf(fp_out,"\n. Subtree patterns aliasing:\t\t%s",io->do_alias_subpatt?"yes":"no");
+  PhyML_Fprintf(fp_out,"\n. Version:\t\t\t\t%s", VERSION);
 
   hour = div(t_end-t_beg,3600);
   min  = div(t_end-t_beg,60  );
 
   min.quot -= hour.quot*60;
 
-  PhyML_Fprintf(fp_out,"\n\u2022 Time used:\t\t\t\t%dh%dm%ds (%d seconds)", hour.quot,min.quot,(int)(t_end-t_beg)%60,(int)(t_end-t_beg));
+  PhyML_Fprintf(fp_out,"\n. Time used:\t\t\t\t%dh%dm%ds (%d seconds)", hour.quot,min.quot,(int)(t_end-t_beg)%60,(int)(t_end-t_beg));
 
 
   if(add_citation == YES)
@@ -3389,7 +3335,7 @@ void Print_Lk(t_tree *tree, char *string)
   while(loc_tree->prev) loc_tree = loc_tree->prev;
 
   time(&(loc_tree->t_current));
-  PhyML_Printf("\n\u2022 (%5d sec) [%15.4f] %s",
+  PhyML_Printf("\n. (%5d sec) [%15.4f] %s",
                (int)(loc_tree->t_current-loc_tree->t_beg),Get_Lk(tree),
            string);
 #ifndef QUIET
@@ -3408,7 +3354,7 @@ void Print_List(t_ll *list)
     {
       t_node *n;
       n = (t_node *)ll->v;
-      PhyML_Printf("\n\u2022 list elem: %p next: %p prev: %p [%d] %p %p",(void *)ll,(void *)ll->next,(void *)ll->prev,n->num,(void *)ll->head,(void *)ll->tail);
+      PhyML_Printf("\n. list elem: %p next: %p prev: %p [%d] %p %p",(void *)ll,(void *)ll->next,(void *)ll->prev,n->num,(void *)ll->head,(void *)ll->tail);
       ll = ll->next;
     }
   while(ll != NULL);
@@ -3420,7 +3366,7 @@ void Print_List(t_ll *list)
 void Print_Pars(t_tree *tree)
 {
   time(&(tree->t_current));
-  PhyML_Printf("\n\u2022 (%5d sec) [%5d]",(int)(tree->t_current-tree->t_beg),tree->c_pars);
+  PhyML_Printf("\n. (%5d sec) [%5d]",(int)(tree->t_current-tree->t_beg),tree->c_pars);
 #ifndef QUIET
   fflush(NULL);
 #endif
@@ -3433,7 +3379,7 @@ void Print_Lk_And_Pars(t_tree *tree)
 {
   time(&(tree->t_current));
 
-  PhyML_Printf("\n\u2022 (%5d sec) [%15.4f] [%5d]",
+  PhyML_Printf("\n. (%5d sec) [%15.4f] [%5d]",
      (int)(tree->t_current-tree->t_beg),
      tree->c_lnL,tree->c_pars);
 
@@ -3461,7 +3407,7 @@ void Read_Qmat(phydbl *daa, phydbl *pi, FILE *fp)
           /* 	  if(!fscanf(fp,"%lf",&(daa[i*20+j]))) Exit("\n"); */
           if(!fscanf(fp,"%lf",&val))
             {
-              PhyML_Printf("\n== Rate matrix file does not appear to have a proper format. Please refer to the documentation.");
+              PhyML_Fprintf(stderr,"\n. Rate matrix file does not appear to have a proper format. Please refer to the documentation.");
               Exit("\n");
             }
           daa[i*20+j] = (phydbl)val;
@@ -3480,8 +3426,8 @@ void Read_Qmat(phydbl *daa, phydbl *pi, FILE *fp)
   for(i=0;i<20;i++) sum += pi[i];
   if(FABS(sum - 1.) > 1.E-06)
     {
-      PhyML_Printf("\n\u2022 Sum of amino-acid frequencies: %f",sum);
-      PhyML_Printf("\n\u2022 Scaling amino-acid frequencies...\n");
+      PhyML_Printf("\n. Sum of amino-acid frequencies: %f",sum);
+      PhyML_Printf("\n. Scaling amino-acid frequencies...\n");
       for(i=0;i<20;i++) pi[i] /= sum;
     }
 }
@@ -3572,9 +3518,9 @@ void Print_Diversity(FILE *fp, t_tree *tree)
 
 /*       if((mean_div_left != tree->data->init_len) || (mean_div_rght != tree->data->init_len)) */
 /* 	{ */
-/* 	  PhyML_Printf("\n\u2022 mean_div_left = %f mean_div_rght = %f init_len = %d", */
+/* 	  PhyML_Printf("\n. mean_div_left = %f mean_div_rght = %f init_len = %d", */
 /* 		 mean_div_left,mean_div_rght,tree->data->init_len); */
-/* 	  PhyML_Printf("\n\u2022 Err in file %s at line %d\n",__FILE__,__LINE__); */
+/* 	  PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__); */
 /* 	  Warn_And_Exit(""); */
 /* 	} */
 }
@@ -3746,8 +3692,8 @@ void Dump_Arr_S(short int* arr, int num)
 
   if(NULL==arr)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-      Exit("\n== Trying to print NULL array");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+      Exit("\n. Trying to print NULL array");
       return;
     }
   fprintf(stdout,"[");
@@ -3768,8 +3714,8 @@ void Dump_Arr_D(phydbl* arr, int num)
 
   if(NULL==arr)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-      Exit("\n== Trying to print NULL array");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+      Exit("\n. Trying to print NULL array");
       return;
     }
   fprintf(stdout,"[");
@@ -3790,8 +3736,8 @@ void Dump_Arr_I(int* arr, int num)
 
   if(NULL==arr)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
-      Exit("\n== Trying to print NULL array");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+      Exit("\n. Trying to print NULL array");
       return;
     }
   fprintf(stdout,"[");
@@ -3814,21 +3760,19 @@ void Print_Tree_Structure(t_tree* tree)
         fprintf(stdout,"Edge %d, LeftNode %d, RightNode %d\n",tree->a_edges[i]->num,tree->a_edges[i]->left->num,tree->a_edges[i]->rght->num);fflush(stdout);
     }
 }
-
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 
 t_tree *Read_User_Tree(calign *cdata, t_mod *mod, option *io)
 {
   t_tree *tree;
-
-
-  PhyML_Printf("\n\u2022 Reading tree..."); fflush(NULL);
+  
+  PhyML_Printf("\n. Reading tree..."); fflush(NULL);
   if(io->n_trees == 1) rewind(io->fp_in_tree);
   tree = Read_Tree_File_Phylip(io->fp_in_tree);
-  fclose(io->fp_in_tree);
-  io->fp_in_tree = NULL;
-  if(!tree) Exit("\n== Input tree not found...");
+  /* fclose(io->fp_in_tree); */
+  /* io->fp_in_tree = NULL; */
+  if(tree == NULL) Exit("\n. Input tree not found...");
   /* Add branch lengths if necessary */
   if(tree->has_branch_lengths == NO) Add_BioNJ_Branch_Lengths(tree,cdata,mod,NULL);
   return tree;
@@ -3846,7 +3790,7 @@ void Print_Time_Info(time_t t_beg, time_t t_end)
   min  = div(t_end-t_beg,60  );
   min.quot -= hour.quot*60;
 
-  PhyML_Printf("\n\n\u2022 Time used %dh%dm%ds\n", hour.quot,min.quot,(int)(t_end-t_beg)%60);
+  PhyML_Printf("\n\n. Time used %dh%dm%ds\n", hour.quot,min.quot,(int)(t_end-t_beg)%60);
   PhyML_Printf("\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo\n");
 }
 
@@ -3915,7 +3859,7 @@ void Read_Clade_Priors(char *file_name, t_tree *tree)
   int node_num;
 
   PhyML_Printf("\n");
-  PhyML_Printf("\n\u2022 Reading prior on node ages.\n");
+  PhyML_Printf("\n. Reading prior on node ages.\n");
 
   line = (char *)mCalloc(T_MAX_LINE,sizeof(char));
   s    = (char *)mCalloc(T_MAX_LINE,sizeof(char));
@@ -3946,7 +3890,7 @@ void Read_Clade_Priors(char *file_name, t_tree *tree)
         }
       s[i] = '\0';
 
-      /* PhyML_Printf("\n\u2022 s = %s\n",s); */
+      /* PhyML_Printf("\n. s = %s\n",s); */
 
       if(line[pos] == '\n' || line[pos] == '#') break;
       pos++;
@@ -3979,10 +3923,10 @@ void Read_Clade_Priors(char *file_name, t_tree *tree)
         {
           PhyML_Printf("\n");
           PhyML_Printf("\n");
-          PhyML_Printf("\n\u2022 .................................................................");
-          PhyML_Printf("\n\u2022 WARNING: could not find any clade in the tree referred to with the following taxon names:");
-          for(i=0;i<clade_size;i++) PhyML_Printf("\n\u2022 \"%s\"",clade_list[i]);
-          PhyML_Printf("\n\u2022 .................................................................");
+          PhyML_Printf("\n. .................................................................");
+          PhyML_Printf("\n. WARNING: could not find any clade in the tree referred to with the following taxon names:");
+          for(i=0;i<clade_size;i++) PhyML_Printf("\n. \"%s\"",clade_list[i]);
+          PhyML_Printf("\n. .................................................................");
           /* sleep(3); */
         }
       else
@@ -3999,29 +3943,29 @@ void Read_Clade_Priors(char *file_name, t_tree *tree)
         tree->rates->nd_t[node_num] = prior_low;
 
           PhyML_Printf("\n");
-          PhyML_Printf("\n\u2022 [%3d]..................................................................",n_clade_priors);
-          PhyML_Printf("\n\u2022 Node %4d matches the clade referred to with the following taxon names:",node_num);
-          for(i=0;i<clade_size;i++) PhyML_Printf("\n\u2022 - \"%s\"",clade_list[i]);
-          PhyML_Printf("\n\u2022 Lower bound set to: %15f time units.",MIN(prior_low,prior_up));
-          PhyML_Printf("\n\u2022 Upper bound set to: %15f time units.",MAX(prior_low,prior_up));
-          PhyML_Printf("\n\u2022 .......................................................................");
+          PhyML_Printf("\n. [%3d]..................................................................",n_clade_priors);
+          PhyML_Printf("\n. Node %4d matches the clade referred to with the following taxon names:",node_num);
+          for(i=0;i<clade_size;i++) PhyML_Printf("\n. - \"%s\"",clade_list[i]);
+          PhyML_Printf("\n. Lower bound set to: %15f time units.",MIN(prior_low,prior_up));
+          PhyML_Printf("\n. Upper bound set to: %15f time units.",MAX(prior_low,prior_up));
+          PhyML_Printf("\n. .......................................................................");
         }
     }
     }
   while(1);
 
 
-  PhyML_Printf("\n\u2022 Read prior information on %d %s.",n_clade_priors,n_clade_priors > 1 ? "clades":"clade");
+  PhyML_Printf("\n. Read prior information on %d %s.",n_clade_priors,n_clade_priors > 1 ? "clades":"clade");
 
   if(!n_clade_priors)
     {
-      PhyML_Printf("\n== PhyTime could not find any prior on node age.");
-      PhyML_Printf("\n== This is likely due to a problem in the calibration ");
-      PhyML_Printf("\n== file format. Make sure, for instance, that there is ");
-      PhyML_Printf("\n== a blank character between the end of the last name");
-      PhyML_Printf("\n== of each clade and the character `|'. Otherwise, ");
-      PhyML_Printf("\n== please refer to the example file.\n");
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+      PhyML_Fprintf(stderr,"\n. PhyTime could not find any prior on node age.");
+      PhyML_Fprintf(stderr,"\n. This is likely due to a problem in the calibration ");
+      PhyML_Fprintf(stderr,"\n. file format. Make sure, for instance, that there is ");
+      PhyML_Fprintf(stderr,"\n. a blank character between the end of the last name");
+      PhyML_Fprintf(stderr,"\n. of each clade and the character `|'. Otherwise, ");
+      PhyML_Fprintf(stderr,"\n. please refer to the example file.\n");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
       Warn_And_Exit("");
     }
 
@@ -4224,9 +4168,9 @@ int Set_Whichmodel(int select)
       }
     default:
       {
-    PhyML_Printf("\n== Model number %d is unknown. Please use a valid model name",select);
-    Exit("\n");
-    break;
+        PhyML_Fprintf(stderr,"\n. Model number %d is unknown. Please use a valid model name",select);
+        Exit("\n");
+        break;
       }
     }
 
@@ -4248,10 +4192,10 @@ void Print_Data_Structure(int final, FILE *fp, t_tree *mixt_tree)
   phydbl r_mat_weight_sum, e_frq_weight_sum;
 
 
-  PhyML_Fprintf(fp,"\n\u2022 Starting tree: %s",
+  PhyML_Fprintf(fp,"\n. Starting tree: %s",
            mixt_tree->io->in_tree == 2?mixt_tree->io->in_tree_file:"BioNJ");
 
-  PhyML_Fprintf(fp,"\n\u2022 Tree topology search: %s",
+  PhyML_Fprintf(fp,"\n. Tree topology search: %s",
            mixt_tree->io->mod->s_opt->opt_topo==YES?
            mixt_tree->io->mod->s_opt->topo_search==SPR_MOVE?"spr":
            mixt_tree->io->mod->s_opt->topo_search==NNI_MOVE?"nni":
@@ -4285,12 +4229,12 @@ void Print_Data_Structure(int final, FILE *fp, t_tree *mixt_tree)
   s[(int)strlen(s)-2]=' ';
   s[(int)strlen(s)-1]='\0';
 
-  if(final == NO)  PhyML_Fprintf(fp,"\n\u2022 Processing %d data %s (%s)",n_partition_elem,n_partition_elem>1?"sets":"set",s);
-  if(final == YES) PhyML_Fprintf(fp,"\n\u2022 Processed %d data %s (%s)",n_partition_elem,n_partition_elem>1?"sets":"set",s);
+  if(final == NO)  PhyML_Fprintf(fp,"\n. Processing %d data %s (%s)",n_partition_elem,n_partition_elem>1?"sets":"set",s);
+  if(final == YES) PhyML_Fprintf(fp,"\n. Processed %d data %s (%s)",n_partition_elem,n_partition_elem>1?"sets":"set",s);
   Free(s);
 
   if(final == YES)
-    PhyML_Fprintf(fp,"\n\u2022 Final log-likelihood: %f",mixt_tree->c_lnL);
+    PhyML_Fprintf(fp,"\n. Final log-likelihood: %f",mixt_tree->c_lnL);
 
   r_mat_weight_sum = MIXT_Get_Sum_Chained_Scalar_Dbl(mixt_tree->next->mod->r_mat_weight);
   e_frq_weight_sum = MIXT_Get_Sum_Chained_Scalar_Dbl(mixt_tree->next->mod->e_frq_weight);
@@ -4306,24 +4250,24 @@ void Print_Data_Structure(int final, FILE *fp, t_tree *mixt_tree)
       PhyML_Fprintf(fp,"\n|_______________________________________________________________________|");
       PhyML_Fprintf(fp,"\n");
 
-      PhyML_Fprintf(fp,"\n\u2022 Number of rate classes:\t\t%12d",mixt_tree->mod->ras->n_catg+(mixt_tree->mod->ras->invar ?1:0));
+      PhyML_Fprintf(fp,"\n. Number of rate classes:\t\t%12d",mixt_tree->mod->ras->n_catg+(mixt_tree->mod->ras->invar ?1:0));
       if(mixt_tree->mod->ras->n_catg > 1)
         {
-          PhyML_Fprintf(fp,"\n\u2022 Model of rate variation:\t\t%12s",
+          PhyML_Fprintf(fp,"\n. Model of rate variation:\t\t%12s",
                         mixt_tree->mod->ras->free_mixt_rates?"FreeRates":
                         mixt_tree->mod->ras->invar?"Gamma+Inv":"Gamma");
           if(mixt_tree->mod->ras->free_mixt_rates == NO)
             {
-              PhyML_Fprintf(fp,"\n\u2022 Gamma shape parameter value:\t\t%12.2f",mixt_tree->mod->ras->alpha->v);
+              PhyML_Fprintf(fp,"\n. Gamma shape parameter value:\t\t%12.2f",mixt_tree->mod->ras->alpha->v);
               PhyML_Fprintf(fp,"\n   Optimise: \t\t\t\t%12s",mixt_tree->mod->s_opt->opt_alpha==YES?"yes":"no");
             }
           if(mixt_tree->mod->ras->invar == YES)
             {
-              PhyML_Fprintf(fp,"\n\u2022 Proportion of invariable sites:\t%12.2f",mixt_tree->mod->ras->pinvar->v);
+              PhyML_Fprintf(fp,"\n. Proportion of invariable sites:\t%12.2f",mixt_tree->mod->ras->pinvar->v);
               PhyML_Fprintf(fp,"\n   Optimise: \t\t\t\t%12s",mixt_tree->mod->s_opt->opt_pinvar==YES?"yes":"no");
             }
         }
-      PhyML_Fprintf(fp,"\n\u2022 Relative average rate:\t\t%12f",mixt_tree->mod->br_len_mult->v);
+      PhyML_Fprintf(fp,"\n. Relative average rate:\t\t%12f",mixt_tree->mod->br_len_mult->v);
 
      
       tree = mixt_tree;
@@ -4332,7 +4276,7 @@ void Print_Data_Structure(int final, FILE *fp, t_tree *mixt_tree)
           if(tree->is_mixt_tree) tree = tree->next;
 
           PhyML_Fprintf(fp,"\n");
-          PhyML_Fprintf(fp,"\n\u2022 Mixture class %d",class+1);
+          PhyML_Fprintf(fp,"\n. Mixture class %d",class+1);
           
           if(mixt_tree->mod->ras->n_catg > 1)
             {
@@ -4654,7 +4598,7 @@ void Print_Data_Structure(int final, FILE *fp, t_tree *mixt_tree)
       do
         {
           PhyML_Fprintf(fp,"\n");
-          PhyML_Fprintf(fp,"\n\u2022 Tree estimated from data partition %d",c++);
+          PhyML_Fprintf(fp,"\n. Tree estimated from data partition %d",c++);
           Br_Len_Involving_Invar(tree->next);
           Rescale_Br_Len_Multiplier_Tree(tree->next);
           s = Write_Tree(tree->next,NO); /*! tree->next is not a mixt_tree so edge lengths
@@ -4709,7 +4653,7 @@ option *PhyML_XML(char *xml_filename)
   
       if(mixt_tree->io->mod->s_opt->random_input_tree)
         {
-          PhyML_Printf("\n\n\u2022 [%3d/%3d]",num_rand_tree+1,mixt_tree->io->mod->s_opt->n_rand_starts);
+          PhyML_Printf("\n\n. [%3d/%3d]",num_rand_tree+1,mixt_tree->io->mod->s_opt->n_rand_starts);
           Random_Tree(mixt_tree);
         }
   
@@ -4741,7 +4685,7 @@ option *PhyML_XML(char *xml_filename)
         }
 
 
-      PhyML_Printf("\n\n\u2022 Log-likelihood = %f",mixt_tree->c_lnL);
+      PhyML_Printf("\n\n. Log-likelihood = %f",mixt_tree->c_lnL);
   
       if((num_rand_tree == io->mod->s_opt->n_rand_starts-1) && (io->mod->s_opt->random_input_tree))
         {
@@ -4786,7 +4730,7 @@ option *PhyML_XML(char *xml_filename)
     }
 
   /*! Print the most likely tree in the output file */
-  if(!mixt_tree->io->quiet) PhyML_Printf("\n\n\u2022 Printing the most likely tree in file '%s'...\n", Basename(mixt_tree->io->out_tree_file));
+  if(!mixt_tree->io->quiet) PhyML_Printf("\n\n. Printing the most likely tree in file '%s'...\n", Basename(mixt_tree->io->out_tree_file));
   PhyML_Fprintf(mixt_tree->io->fp_out_tree,"%s\n",most_likely_tree);
 
   /*! Bootstrap analysis */
@@ -4847,10 +4791,10 @@ void Check_Taxa_Sets(t_tree *mixt_tree)
             {
               if(strcmp(tree->a_nodes[i]->name,tree->next->a_nodes[i]->name))
                 {
-                  PhyML_Printf("\n== There seems to be a problem in one (or more) of your");
-                  PhyML_Printf("\n== sequence alignments. PhyML could not match taxon");
-                  PhyML_Printf("\n== '%s' found in file '%s' with any of the taxa",tree->a_nodes[i]->name,tree->io->in_align_file);
-                  PhyML_Printf("\n== listed in file '%s'.",tree->next->io->in_align_file);
+                  PhyML_Fprintf(stderr,"\n. There seems to be a problem in one (or more) of your");
+                  PhyML_Fprintf(stderr,"\n. sequence alignments. PhyML could not match taxon");
+                  PhyML_Fprintf(stderr,"\n. '%s' found in file '%s' with any of the taxa",tree->a_nodes[i]->name,tree->io->in_align_file);
+                  PhyML_Fprintf(stderr,"\n. listed in file '%s'.",tree->next->io->in_align_file);
                   Exit("\n");
                 }
             }
@@ -4873,8 +4817,8 @@ void Make_Ratematrix_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
 
   if(model == NULL)
     {
-      PhyML_Printf("\n== Poorly formated XML file.");
-      PhyML_Printf("\n== Attribute 'model' is mandatory in a <ratematrix> node.");
+      PhyML_Fprintf(stderr,"\n. Poorly formated XML file.");
+      PhyML_Fprintf(stderr,"\n. Attribute 'model' is mandatory in a <ratematrix> node.");
       Exit("\n");
     }
 
@@ -4912,7 +4856,7 @@ void Make_Ratematrix_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
     {
       if(io->datatype != NT)
         {
-          PhyML_Printf("\n== Data type and selected model are incompatible");
+          PhyML_Fprintf(stderr,"\n. Data type and selected model are incompatible");
           Exit("\n");
         }
     }
@@ -4920,7 +4864,7 @@ void Make_Ratematrix_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
     {
       if(io->datatype != AA)
         {
-          PhyML_Printf("\n== Data type and selected model are incompatible");
+          PhyML_Fprintf(stderr,"\n. Data type and selected model are incompatible");
           Exit("\n");
         }
     }
@@ -5002,8 +4946,8 @@ void Make_Ratematrix_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
 
       if(!model_code)
         {
-          PhyML_Printf("\n== No valid 'model.code' attribute could be found.\n");
-          PhyML_Printf("\n== Please fix your XML file.\n");
+          PhyML_Fprintf(stderr,"\n. No valid 'model.code' attribute could be found.\n");
+          PhyML_Fprintf(stderr,"\n. Please fix your XML file.\n");
           Exit("\n");
         }
       else
@@ -5022,8 +4966,8 @@ void Make_Ratematrix_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
 
       if(!r_mat_file)
         {
-          PhyML_Printf("\n== No valid 'ratematrix.file' attribute could be found.");
-          PhyML_Printf("\n== Please fix your XML file.\n");
+          PhyML_Fprintf(stderr,"\n. No valid 'ratematrix.file' attribute could be found.");
+          PhyML_Fprintf(stderr,"\n. Please fix your XML file.\n");
           Exit("\n");
         }
       else
@@ -5065,8 +5009,8 @@ void Make_Efrq_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
         {
           if(io->datatype == AA)
             {
-              PhyML_Printf("\n== Option 'optimise.freqs' set to 'yes' (or 'true')");
-              PhyML_Printf("\n== is not allowed with amino-acid data.");
+              PhyML_Fprintf(stderr,"\n. Option 'optimise.freqs' set to 'yes' (or 'true')");
+              PhyML_Fprintf(stderr,"\n. is not allowed with amino-acid data.");
               Exit("\n");
             }
           mod->s_opt->opt_state_freq = YES;
@@ -5098,7 +5042,7 @@ void Make_Efrq_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
     {
       if(io->datatype == AA)
         {
-          PhyML_Printf("\n== Option 'base.freqs' is not allowed with amino-acid data.");
+          PhyML_Fprintf(stderr,"\n. Option 'base.freqs' is not allowed with amino-acid data.");
           Exit("\n");
         }
       else
@@ -5139,8 +5083,8 @@ void Make_Topology_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
 
   if(!init_tree)
     {
-      PhyML_Printf("\n== Attribute 'init.tree=bionj|user|random' is mandatory");
-      PhyML_Printf("\n== Please amend your XML file accordingly.");
+      PhyML_Fprintf(stderr,"\n. Attribute 'init.tree=bionj|user|random' is mandatory");
+      PhyML_Fprintf(stderr,"\n. Please amend your XML file accordingly.");
       Exit("\n");
     }
 
@@ -5152,7 +5096,7 @@ void Make_Topology_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
 
       if(!Filexists(starting_tree))
         {
-          PhyML_Printf("\n== The tree file '%s' could not be found.",starting_tree);
+          PhyML_Fprintf(stderr,"\n. The tree file '%s' could not be found.",starting_tree);
           Exit("\n");
         }
       else
@@ -5174,7 +5118,7 @@ void Make_Topology_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
       if(n_rand_starts)
         {
           mod->s_opt->n_rand_starts = atoi(n_rand_starts);
-          if(mod->s_opt->n_rand_starts < 1) Exit("\n== Number of random starting trees must be > 0.\n\n");
+          if(mod->s_opt->n_rand_starts < 1) Exit("\n. Number of random starting trees must be > 0.\n\n");
         }
 
       strcpy(io->out_trees_file,io->in_align_file);
@@ -5245,7 +5189,7 @@ void Make_Topology_From_XML_Node(xml_node *instance, option *io, t_mod *mod)
                   }
                 default:
                   {
-                    PhyML_Printf("\n== Topology search option '%s' is not valid.",search);
+                    PhyML_Fprintf(stderr,"\n. Topology search option '%s' is not valid.",search);
                     Exit("\n");
                     break;
                   }
@@ -5419,17 +5363,17 @@ void Make_RAS_From_XML_Node(xml_node *parent, t_mod *mod)
           }
         default:
           {
-            if(family != NULL) PhyML_Printf("\n== family: %s",family);
+            if(family != NULL) PhyML_Printf("\n. family: %s",family);
             else 
               {
-                PhyML_Printf("\n== Please specify a model family (\"gamma\", \"gamma+inv\" or \"freerate\")");
-                PhyML_Printf("\n== for every 'weights' element in every 'siterate' element. Note that " );
-                PhyML_Printf("\n== a \"gamma\" or a \"freerate\" model with a single rate class amounts");
-                PhyML_Printf("\n== to no variation of rates across sites, if this is the model you'd");
-                PhyML_Printf("\n== like to implement...");
+                PhyML_Printf("\n. Please specify a model family (\"gamma\", \"gamma+inv\" or \"freerate\")");
+                PhyML_Printf("\n. for every 'weights' element in every 'siterate' element. Note that " );
+                PhyML_Printf("\n. a \"gamma\" or a \"freerate\" model with a single rate class amounts");
+                PhyML_Printf("\n. to no variation of rates across sites, if this is the model you'd");
+                PhyML_Printf("\n. like to implement...");
               }
 
-            PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+            PhyML_Printf("\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
             Exit("\n");
           }
         }
@@ -5439,10 +5383,10 @@ void Make_RAS_From_XML_Node(xml_node *parent, t_mod *mod)
 
   if(w && nc != mod->ras->n_catg)
     {
-      PhyML_Printf("\n== <siterates> component '%s'. The number of classes ",parent->id);
-      PhyML_Printf("\n== specified in the <weight> component should be ");
-      PhyML_Printf("\n== the same as that of <instance> nodes. Please fix");
-      PhyML_Printf("\n== your XML file accordingly.");
+      PhyML_Printf("\n. <siterates> component '%s'. The number of classes ",parent->id);
+      PhyML_Printf("\n. specified in the <weight> component should be ");
+      PhyML_Printf("\n. the same as that of <instance> nodes. Please fix");
+      PhyML_Printf("\n. your XML file accordingly.");
       Exit("\n");
     }
 
@@ -5457,8 +5401,9 @@ void Make_RAS_From_XML_Node(xml_node *parent, t_mod *mod)
 
 void Generic_Exit(const char *file, int line, const char *function)
 {
-  PhyML_Printf("\n== Err. in file '%s' (line %d)",file,line);
+  PhyML_Fprintf(stderr,"\n. Err. in file '%s' (line %d)",file,line);
   if(function != NULL) PhyML_Printf(", function '%s'",function);
+  PhyML_Fprintf(stderr,"\n. PhyML finished prematurely.");
   Exit("\n");
 }
 
@@ -5708,7 +5653,7 @@ json_o *JSON_Tree_To_Object(t_tree *mixt_tree)
       {
         if(tree->is_mixt_tree == YES) tree = tree->next;
         
-        for(i=0;i<n_tstv;i++) if(tree->mod->kappa == tstv[i]) break;
+        for(i=0;i<n_tstv;++i) if(tree->mod->kappa == tstv[i]) break;
         
         if(i == n_tstv)
           {
@@ -5825,8 +5770,49 @@ json_o *JSON_Tree_To_Object(t_tree *mixt_tree)
   }
 
 
+  
+  // Tree size
+  {
+    tree = mixt_tree;
+    int tree_num = 1;
+    do
+      {        
+        o->next = (json_o *)mCalloc(1,sizeof(json_o));
+        o = o->next;
+                
+        o->sv = (json_sv *)mCalloc(1,sizeof(json_sv));
+        sv = o->sv;
+        
+        sv->value = NULL; sv->array = NULL; sv->object = NULL; o->next = NULL;
+        sv->string = (char *)mCalloc(string_len,sizeof(char));
+        strcpy(sv->string,"type");
+        sv->value = (char *)mCalloc(string_len,sizeof(char));
+        strcpy(sv->value,"t_param");
+                
+        sv->next = (json_sv *)mCalloc(1,sizeof(json_sv));
+        sv = sv->next;
+        sv->value = NULL; sv->array = NULL; sv->object = NULL; sv->next = NULL;
+        sv->string = (char *)mCalloc(string_len,sizeof(char));
+        strcpy(sv->string,"id");
+        sv->value = (char *)mCalloc(string_len,sizeof(char));
+        strcpy(sv->value,"tree_size");
+        sprintf(sv->value+strlen(sv->value),"%d",tree_num);
+        
+        sv->next = (json_sv *)mCalloc(1,sizeof(json_sv));
+        sv = sv->next;
+        sv->value = NULL; sv->array = NULL; sv->object = NULL; sv->next = NULL;
+        sv->string = (char *)mCalloc(string_len,sizeof(char));
+        strcpy(sv->string,"value");
+        sv->value = (char *)mCalloc(string_len,sizeof(char));
+        sprintf(sv->value,"%G",Get_Tree_Size(tree));
+        
+        sv->next = NULL;
+                
+        tree = tree->next_mixt;
+      }
+    while(tree);
 
-
+  }
 
   return(ret);
 }

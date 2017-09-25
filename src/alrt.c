@@ -132,8 +132,8 @@ int Check_NNI_Five_Branches(t_tree *tree)
       
       if((tree->c_lnL < init_lnL - tree->mod->s_opt->min_diff_lk_local) || (tree->c_lnL > init_lnL + tree->mod->s_opt->min_diff_lk_local))
         {
-          PhyML_Printf("\n\n== tree->c_lnL = %f init_lnL = %f.",tree->c_lnL,init_lnL);
-          PhyML_Printf("\n== Err. in file %s at line %d\n\n.\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n\n== tree->c_lnL = %f init_lnL = %f.",tree->c_lnL,init_lnL);
+          PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n.\n",__FILE__,__LINE__);
           Warn_And_Exit("\n");
         }
       
@@ -152,8 +152,8 @@ int Check_NNI_Five_Branches(t_tree *tree)
 
           if(tree->c_lnL < init_lnL)
             {
-              PhyML_Printf("\n\n== tree->c_lnL = %f init_lnL = %f.",tree->c_lnL,init_lnL);
-              PhyML_Printf("\n== Err. in file %s at line %d\n\n.\n",__FILE__,__LINE__);
+              PhyML_Fprintf(stderr,"\n\n== tree->c_lnL = %f init_lnL = %f.",tree->c_lnL,init_lnL);
+              PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n.\n",__FILE__,__LINE__);
               Exit("\n");
             }
 
@@ -378,13 +378,13 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
 
   if(v1->num < v2->num)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
       Exit("");
     }
 
   if(v3->num < v4->num)
     {
-      PhyML_Printf("\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
       Exit("");
     }
 
@@ -431,8 +431,8 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
 
       if(lk_temp < lk0 - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== lk_temp = %f lk0 = %f\n",lk_temp,lk0);
-          PhyML_Printf("\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n== lk_temp = %f lk0 = %f\n",lk_temp,lk0);
+          PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
           Exit("\n");
         }
     }
@@ -444,7 +444,7 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
   buff = (t_tree *)tree;
   do
     {
-      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[0][site] = tree->c_lnL_sorted[site];
+      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[0][site] = tree->c_lnL_sorted[site] * tree->data->wght[site];
       tree = tree->next_mixt;
     }
   while(tree);
@@ -477,8 +477,8 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
   MIXT_Set_Alias_Subpatt(NO,tree);
   if((lk_temp > lk_init + tree->mod->s_opt->min_diff_lk_local) || (lk_temp < lk_init - tree->mod->s_opt->min_diff_lk_local))
     {
-      PhyML_Printf("\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -528,8 +528,8 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
       
       if(lk_temp < lk1 - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== lk_temp = %f lk1 = %f\n",lk_temp,lk1);
-          PhyML_Printf("\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n== lk_temp = %f lk1 = %f\n",lk_temp,lk1);
+          PhyML_Fprintf(stderr,"\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
           Warn_And_Exit("");
         }
     }
@@ -543,7 +543,7 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
   buff = (t_tree *)tree;
   do
     {
-      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[1][site]= tree->c_lnL_sorted[site];
+      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[1][site]= tree->c_lnL_sorted[site] * tree->data->wght[site];
       tree = tree->next_mixt;
     }
   while(tree);
@@ -578,8 +578,8 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
   MIXT_Set_Alias_Subpatt(NO,tree);
   if((lk_temp > lk_init + tree->mod->s_opt->min_diff_lk_local) || (lk_temp < lk_init - tree->mod->s_opt->min_diff_lk_local))
     {
-      PhyML_Printf("\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
     
@@ -614,9 +614,9 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
             
             if(lk_temp < lk2 - tree->mod->s_opt->min_diff_lk_local)
               {
-                PhyML_Printf("\n== l: %f var:%f",b_fcus->left->b[i]->l->v,b_fcus->left->b[i]->l_var->v);
-                PhyML_Printf("\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
-                PhyML_Printf("\n== Err. in file %s at line %d",__FILE__,__LINE__);
+                PhyML_Fprintf(stderr,"\n== l: %f var:%f",b_fcus->left->b[i]->l->v,b_fcus->left->b[i]->l_var->v);
+                PhyML_Fprintf(stderr,"\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
+                PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d",__FILE__,__LINE__);
                 Exit("\n");
               }
           }
@@ -625,9 +625,9 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
       
       if(lk_temp < lk2 - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== l: %f var:%f",b_fcus->l->v,b_fcus->l_var->v);
-          PhyML_Printf("\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
-          PhyML_Printf("\n== Err. in file %s at line %d",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n== l: %f var:%f",b_fcus->l->v,b_fcus->l_var->v);
+          PhyML_Fprintf(stderr,"\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
+          PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d",__FILE__,__LINE__);
           Exit("\n");
         }
       
@@ -642,9 +642,9 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
                 Set_Both_Sides(YES,tree);
                 Lk(b_fcus,tree);
                 Check_Lk_At_Given_Edge(YES,tree);
-                PhyML_Printf("\n== l: %f var:%f",b_fcus->rght->b[i]->l->v,b_fcus->rght->b[i]->l_var->v);
-                PhyML_Printf("\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
-                PhyML_Printf("\n== Err. in file %s at line %d",__FILE__,__LINE__);
+                PhyML_Fprintf(stderr,"\n== l: %f var:%f",b_fcus->rght->b[i]->l->v,b_fcus->rght->b[i]->l_var->v);
+                PhyML_Fprintf(stderr,"\n== lk_temp = %f lk2 = %f",lk_temp,lk2);
+                PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d",__FILE__,__LINE__);
                 Exit("\n");
               }
           }
@@ -661,7 +661,7 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
   buff = (t_tree *)tree;
   do
     {
-      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[2][site]= tree->c_lnL_sorted[site];
+      for(site=0;site<tree->n_pattern;site++) tree->log_lks_aLRT[2][site]= tree->c_lnL_sorted[site] * tree->data->wght[site];
       tree = tree->next_mixt;
     }
   while(tree);
@@ -710,8 +710,8 @@ int NNI_Neigh_BL(t_edge *b_fcus, t_tree *tree)
 
   if((lk_temp > lk_init + tree->mod->s_opt->min_diff_lk_local) || (lk_temp < lk_init - tree->mod->s_opt->min_diff_lk_local))
     {
-      PhyML_Printf("\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== lk_temp = %f lk_init = %f",lk_temp,lk_init);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -776,7 +776,7 @@ void Make_Target_Swap(t_tree *tree, t_edge *b_fcus, int swaptodo)
 
   if(swaptodo < 0)
     {
-      PhyML_Printf("\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -795,12 +795,12 @@ void Make_Target_Swap(t_tree *tree, t_edge *b_fcus, int swaptodo)
 
   if(v1->num < v2->num)
     {
-      PhyML_Printf("\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== Err in file %s at line %d\n\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
   if(v3->num < v4->num)
     {
-      PhyML_Printf("\n. Err in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -860,8 +860,8 @@ void Make_Target_Swap(t_tree *tree, t_edge *b_fcus, int swaptodo)
 
       if(lk_temp < lktodo - tree->mod->s_opt->min_diff_lk_local)
         {
-          PhyML_Printf("\n== Edge %3d lk_temp = %f lktodo = %f\n",b_fcus->num,lk_temp,lktodo);
-          PhyML_Printf("\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n== Edge %3d lk_temp = %f lktodo = %f\n",b_fcus->num,lk_temp,lktodo);
+          PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
           Warn_And_Exit("");
         }
     }
@@ -880,9 +880,9 @@ void Make_Target_Swap(t_tree *tree, t_edge *b_fcus, int swaptodo)
 
   if(tree->c_lnL < lk_init - tree->mod->s_opt->min_diff_lk_global)
     {
-      PhyML_Printf("\n== [%3d] v1=%d v2=%d v3=%d v4=%d",b_fcus->num,v1->num,v2->num,v3->num,v4->num);
-      PhyML_Printf("\n== tree->c_lnL = %f lk_init = %f\n",tree->c_lnL,lk_init);
-      PhyML_Printf("\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n== [%3d] v1=%d v2=%d v3=%d v4=%d",b_fcus->num,v1->num,v2->num,v3->num,v4->num);
+      PhyML_Fprintf(stderr,"\n== tree->c_lnL = %f lk_init = %f\n",tree->c_lnL,lk_init);
+      PhyML_Fprintf(stderr,"\n== Err. in file %s at line %d\n\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 }

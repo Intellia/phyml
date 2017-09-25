@@ -1072,12 +1072,13 @@ Sequence file name~: `{\x seq}'\\
 \hline
 Output file name & Content \\
 \hline
-\x{seq\_phyml\_tree} & ML tree\\
-\x{seq\_phyml\_stats} &  ML model parameters\\
-\x{seq\_phyml\_boot\_trees} & ML trees -- bootstrap replicates\\
-\x{seq\_phyml\_boot\_stats} & ML model parameters -- bootstrap replicates \\
-\x{seq\_phyml\_rand\_trees} & ML trees -- multiple random starts\\
-\x{seq\_phyml\_ancestral\_seq} & ML trees -- ancestral sequences\\
+\x{seq\_phyml\_tree.txt} & ML tree\\
+\x{seq\_phyml\_stats.txt} &  ML model parameters\\
+\x{seq\_phyml\_boot\_trees.txt} & ML trees -- bootstrap replicates\\
+\x{seq\_phyml\_boot\_stats.txt} & ML model parameters -- bootstrap replicates \\
+\x{seq\_phyml\_rand\_trees.txt} & ML trees -- multiple random starts\\
+\x{seq\_phyml\_ancestral\_seq.txt} & ancestral sequences\\
+\x{seq\_phyml\_ancestral\_tree.txt} & ML tree with node labels as in ancestral sequence file\\
 \hline
 \end{tabular}
 \end{center}
@@ -1099,32 +1100,13 @@ information can be used to estimate sampling errors around each parameter of the
 When the random  tree option is turned on,  the maximum likelihood trees estimated  from each random
 starting trees are printed in a separate tree file (see last row of Table \ref{tab:output}).
 
-PhyML estimates ancestral sequences by calculating the marginal probability of each character state
-at each internal node of the phylogeny. These probabilities are given in the file
-\x{seq\_phyml\_ancestral\_seq}. The bulk of this file is a table where each row corresponds to a
-site in the original alignment and an the number corresponding to an internal node. It is relatively
+PhyML estimates ancestral sequences by calculating the {\em marginal} (as opposed to the {\em joint}) probability of each character
+  state at each internal node of the phylogeny. These probabilities are given in the file
+\x{seq\_phyml\_ancestral\_seq.txt}. The bulk of this file is a table where each row corresponds to a
+site in the original alignment and a number corresponding labeling each internal node. It is relatively
 straightforward to identify which number corresponds to which node in the tree by examining the
-information provided at the beginning of \x{seq\_phyml\_ancestral\_seq}. This section of the file
-displays the tree structure in terms of a list of node numbers rather than in the NEWICK format. 
-For instance, the tree \x{(A,B,(C,D));} corresponds to the
-following list of nodes:
+information provided in the Newick-formatted file \x{seq\_phyml\_ancestral\_tree.txt}.
 
-\vspace{0.2cm}
-\begin{Verbatim}[frame=single, label=List of nodes corresponding to \x{(A,B,(C,D));}, samepage=true,
-  baselinestretch=0.5, fontsize=\small]
-
-Node nums:   0   4  (dir:  0) names = 'A'      '(null)';
-Node nums:   4   2  (dir:  1) names = '(null)' 'B';
-Node nums:   4   5  (dir:  2) names = '(null)' '(null)';
-Node nums:   5   1  (dir:  0) names = '(null)' 'C';
-Node nums:   5   3  (dir:  1) names = '(null)' 'D';
-
-\end{Verbatim}
-
-The two integers following \x{Node nums} are the node numbers. They are displayed in a recursive
-manner. The number on the left column is that of the ancestral node while the one on the right
-column is the direct descendant. The following columns are the node names. These names are set to
-\x{null} except for the tip nodes, where the corresponding taxon names are displayed.
 
 \subsection{Treatment of invariable sites with fixed branch lengths}
 
@@ -2154,14 +2136,25 @@ The ``historic citation'' for PhyML is:
 
 
 
-\section{Other programs in the PhyML package}
+\section{Other programs}
 
 PhyML  is software package  that provides  tools to  tackle problems  other than  estimating maximum
 likelihood  phylogenies.  Installing these  tools  and  processing data  sets  is  explained is  the
 following sections.
 
-\subsection{PhyTime}\index{PhyTime} PhyTime is  a program that estimates node  ages and substitution
-rates using a Bayesian  approach. This software served as a basis to perform the research in the following three articles: \cite{guindon10,guindon13,guindon17},
+\subsection{PhyTime}\index{PhyTime} PhyTime is  a program that uses Bayesian sampling techniques to
+infer phylogenies from the analysis of genetic and fossil data. Edge lengths (and node heights) are
+expressed in calendar time units as opposed to expected number of substitutions as in
+PhyML. PhyTime can thus be used to date past evolutionary events. The main original features
+compared to other software for molecular dating are:
+\begin{itemize}
+\item a model of rate evolution whereby rates can vary along each branch (other
+  software consider that the rates of evolution vary from one branch to another but stay constant
+  along any given branch) \cite{guindon13}.
+\item the opportunity to accomodate for uncertainty in calibration information. A single time
+  constraint can apply to multiple clades with corresponding probabilities as determined from prior
+  analysis of fossil data \cite{guindon17}.
+\end{itemize}
 
 \subsubsection{Installing PhyTime}
 
@@ -2180,30 +2173,31 @@ make;
 similar to running  PhyML using an XML parameter input file.  The main differences between the  two programs are
 explained below:
 \begin{itemize}
-\item Unlike PhyML, PhyTime requires calibration (and sequence) data as input. The format for
+\item Unlike PhyML, PhyTime requires calibration (along with genetic sequence) data as input. The format for
   defining the relevant time intervals is described below.
-\item  PhyTime does not allow partitionned (i.e., multigene) analysis. Future releases might 
-implement this feature (depending on users' requests).
+\item  PhyTime does not allow partitionned (i.e., multigene) analysis yet.
 \end{itemize}
 
 \subsubsection{PhyTime input}
 As stated above, PhyTime takes as input an XML file very similar to those compatible with PhyML. An
 example is given thereafter. The first part of the input file (up to the \x{partitionelem} block) corresponds to a standard XML input
-file for PhyML. The second part is PhyTime-specific. Two new elements can be found here: \x{clade}
+file for PhyML. Note however that the tag name ``\x{phytime}'' replaces ``\x{phyml}''. The second part is PhyTime-specific. Two new tags can be found here: \x{clade}
 and \x{calibration}\index{PhyTime!calibration}. The \x{clade}\index{PhyTime!clade} element is used to define a subset of taxa. Each of these taxa is
 given in a \x{taxon} element. The  value that each taxon takes is a string corresponding to the
 name of one of the sequences in the alignment file. In the example that follows, \x{Gymno\_Cycas}, \x{Gymno\_Ginko} and
 \x{Gymno\_Juniperus} are three taxa that define a clade called \x{CLADE1}. Note that  this clade may
 not be monophyletic. In fact it is not considered as such during the inference. The second important element is \x{calibration}. It
-helps defining time intervals corresponding to the time of diversification (i.e., the time of the most
-recent common ancestor) of the set of taxa the calibration points to. Each interval is defined using 
+defines time intervals corresponding to the time of diversification (i.e., the time of the most
+recent common ancestor) of the set of taxa the calibration points to. In other words, a given time
+interval defines the calibration for the timing of the crown node of a given clade. Each interval is defined using 
 \x{upper} and \x{lower} bounds.
 
 \vspace{0.2cm}
 \begin{Verbatim}[frame=single, label=Example of PhyTime XML file, samepage=true, baselinestretch=0.5,
   fontsize=\small, numbers=left]
 
-<phyml run.id="abc" output.file="def">
+<phytime run.id="abc" output.file="def" mcmc.chain.len="1E+7" \
+mcmc.sample.every="100" mcmc.print.every="50" mcmc.burnin="10000">
 
   <!-- Tree topology: use "bionj" here. Does not matter as the -->
   <!-- tree is randomized at the start of the analysis anyway -->
@@ -2277,49 +2271,208 @@ recent common ancestor) of the set of taxa the calibration points to. Each inter
     </appliesto>
   </calibration>
 
-</phyml>
+</phytime>
 \end{Verbatim}
 
+\subsubsection{Accounting for calibration uncertainty}
 
+It is not always obvious to determine with full precision and accuracy where in the tree a given
+fossil branches in {\em a priori}. For instance, a first morphological feature of an ancestral (fossilized) species
+might be shared by species A but not B nor C, while a second feature might be displayed by A and B but
+not C. The first feature calibrates the most recent common ancestor (MRCA)\index{MRCA} of A and
+B. Indeed, this ancestor cannot be younger than the fossil itself because, if this was  the case, then
+A {\em and} B would display the morphological feature of interest. In a similar fashion, the second
+feature points to a MRCA of A, B and the fossil that is older than the MRCA of A and B
+only. Assuming that the tree topology is ((A,B),C), the calibration thus applies here to the MRCA of
+A, B and C, which cannot be younger than the fossil. Assuming that the fossil was discovered in a
+well-defined geological layer which age range is known without ambiguity, there is still uncertainty
+around the node in the tree this time interval calibrates. PhyTime accomodates for this uncertainty by giving a
+probability to the two scenari: with probability $\alpha$ the calibration time interval applies to
+the MRCA of species A and B and with probability $1-\alpha$, this interval calibrates the age of the
+MRCA of A, B and C. 
 
+It is fairly straightforward to set up an analysis that incorporates probabilistic distributions on
+calibrations in PhyTime. The section of the XML file below gives a simple example whereby the
+calibration  ``\x{CAL1}'' applies to ``\x{CLADE1}'' (i.e., the smallest clade in the tree that
+displays the three taxa {\em Gymno\_Juniperus},
+  {\em Gymno\_Sciadopitys} and {\em Gymno\_Cycas}) with probability 0.2 and to ``\x{CLADE2}'' (i.e.,
+  the smallest clade that displays {\em  Gymno\_Juniperus} and {\em Gymno\_Sciadopitys}) with probability 0.8.
 
-\subsubsection{PhyTime output}
+\begin{Verbatim}[frame=single, label=Example of PhyTime XML file with calibration uncertainty, samepage=true, baselinestretch=0.5,
+  fontsize=\small, numbers=left]
+  ...
+ 
+  <clade id="CLADE1">
+    <taxon value="Gymno_Juniperus"/>
+    <taxon value="Gymno_Sciadopitys"/>
+    <taxon value="Gymno_Cycas"/>
+  </clade>
 
-The     program     PhyTime     generates     two     output     files.      Using the XML file given
-above, one of the output files is called  `\x{abc\_def\_phytime\_stats}'. It lists the
-node times  and (relative) substitution rates on edges  sampled during the  estimation process.   It also  gives the
-sampled values for other parameters, such as  the autocorrelation of rates (parameter `nu'), and the
-rate of evolution (parameter `clock') amongst others.   This output file can be analysed with the
-program        Tracer\index{Tracer}        from         the        BEAST\index{BEAST}        package
-(\url{http://beast.bio.ed.ac.uk/Main_Page}) or Icylog (\url{http://tgvaughan.github.io/icylog/}\index{Icylog}).        The       second      file       is       called
-`\x{abc\_def\_phytime\_trees}'.  It is  the list of rooted trees that were  collected during the
-estimation process, i.e., phylogenies sampled from the posterior density of trees.  This file can be
-processed   using   the   software   TreeAnnotator,   also  part   of   the   BEAST   package   (see
-\url{http://beast.bio.ed.ac.uk/Main_Page}) in  order to generate  confidence sets for the  node time
-estimates.
+  <clade id="CLADE2">
+    <taxon value="Gymno_Juniperus"/>
+    <taxon value="Gymno_Sciadopitys"/>
+  </clade>
+
+  <clade id="CLADE3">
+    <taxon value="Fagales_Juglans"/>
+    <taxon value="Ophioglossum"/>
+  </clade>
+
+  
+  <calibration id="CAL1">
+    <lower>-400</lower>
+    <upper>-50</upper>
+    <appliesto clade.id="CLADE1" probability="0.2"/>
+    <appliesto clade.id="CLADE2" probability="0.8"/>
+  </calibration>
+
+  <calibration id="CAL2">
+    <lower>-500</lower>
+    <upper>-300</upper>
+    <appliesto clade.id="CLADE3">
+    </appliesto>
+  </calibration>
+
+</phytime>
+\end{Verbatim}
 
 
 \subsubsection{MCMC settings}
 
 PhyTime estimates the joint posterior distribution  of the phylogenetic model parameters  using an
-MCMC algorithm. This algorithm relies on sampling values of these parameters iteratively. The number
-of iterations is fixed to 1E+07 and values of parameters are recorded every 200 generations. The
-vast majority of analyses will not warrant 1E+07 iterations  to converge to the
-target distribution (i.e., converge to the solution). I thus recommend  monitoring each analysis by
-loading on a regular basis the statistics output file produced by PhyTime in Tracer or Icylog  and
-interrupt the analysis once the effective sample sizes of all parameters have reached 200. 
+MCMC algorithm. This algorithm relies on sampling values of these parameters iteratively. The
+default number of iterations is fixed to 1E+07 and values of parameters are recorded every 1E+03
+iteration of the MCMC algorithm. The burnin period, during which tuning parameters of the MCMC as
+adjusted, lasts for 1E+04 iterations. These three parameters can be modified by setting the values
+of the attributes \x{mcmc.chain.len}, \x{mcmc.sample.every} and \x{mcmc.burnin} in the XML parameter
+file accordingly. For instance, the first line of this file could look as follows: \x{<phytime
+run.id="example" output.file="small" mcmc.chain.len="1E+7" mcmc.sample.every="100"
+mcmc.print.every="50" mcmc.burnin="10000">}
 
-The MCMC
-algorithm implemented in PhyTime relies on multiple operators that update different parameters, or the
-same parameter in different ways. The weights of these operators, i.e., the frequency with which
-they are applied, were adjusted for the analysis of the plant data set described in
-\cite{guindon17}. If you think these default values are not suitable for your own analysis, please
-feel free to have a look at the function \x{MCMC\_Complete\_MCMC} in the file \x{mcmc.c} to make 
-the appropriate changes to the values of \x{mcmc->move\_weight[XXX]}, where \x{XXX} is the name of
-the operator. Alternatively, you might want to send me an email (\url{guindon@lirmm.fr}) if you are
-unsure about all this. 
+The vast majority of analyses will not warrant 1E+07 iterations  to converge to the target
+distribution (i.e., converge to the solution). I thus recommend  monitoring each analysis by loading
+on a regular basis the statistics output file produced by PhyTime and interrupt the analysis once
+the effective sample sizes of all parameters have reached 200.  The MCMC algorithm implemented in
+PhyTime relies on multiple operators that update different parameters, or the same parameter in
+different ways. The weights of these operators, i.e., the frequency with which they are applied,
+were adjusted for the analysis of the plant data set described in \cite{guindon17}. If you think
+these default values are not suitable for your own analysis, please feel free to have a look at the
+function \x{MCMC\_Complete\_MCMC} in the file \x{mcmc.c} to make  the appropriate changes to the
+values of \x{mcmc->move\_weight[XXX]}, where \x{XXX} is the name of the operator. Alternatively, you
+might want to send me an email (\url{guindon@lirmm.fr}) if you are unsure about all this. 
 
 
+\subsubsection{PhyTime output}
+
+The     program     PhyTime     generates     two     output     files.      Using the XML file
+given above, one of the output files is called  `\x{abc\_def\_phytime\_stats.txt}'. It lists the
+node times  and (relative) substitution rates on edges  sampled during the  estimation process.   It
+also  gives the sampled values for other parameters, such as  the autocorrelation of rates
+(parameter `nu'), and the rate of evolution (parameter `clock') amongst others.   This output file
+can not be analysed with the program        Tracer\index{Tracer}        from         the
+BEAST\index{BEAST}        package (\url{http://beast.bio.ed.ac.uk/Main_Page}) or Icylog
+(\url{http://tgvaughan.github.io/icylog/}\index{Icylog}) as some of the columns display
+non-numerical variables. It is preferable to process this file using R here. Section
+\ref{sec:phytimeexample} of this document gives more information about the statistics output file.       The       second      file       is
+called `\x{abc\_def\_phytime\_trees.txt}'.  It is  the list of rooted trees that were  collected
+during the estimation process, i.e., phylogenies sampled from the posterior density of trees.  This
+file can be processed   using   the   software   TreeAnnotator,   also  part   of   the   BEAST
+package   (see \url{http://beast.bio.ed.ac.uk/Main_Page}) in  order to generate  confidence sets for
+the  node time estimates.
+
+
+\subsubsection{An example of PhyTime input and output files}\label{sec:phytimeexample}
+
+The directory \x{phyml/examples/phytime/} provides a sequence alignment (\x{seq.txt}) and an XML
+input file (\x{param.xml}) that can be used to run an analysis (using the following command:
+\x{phytime --xml=param.xml}). The XML file is very similar to that described above and will thus not
+be discussed further. The statistics output file is called \x{small\_example\_phytime\_stats.txt}. The
+columns of this file are as follows:
+\begin{itemize}
+\item \x{sample}: the index of the iteration in the MCMC algorithm. For instance, a sample value of
+  100 means that 100 ``moves'' in the MCMC have been applied so far, one such move can correspond to
+  an attempt to modify the tree topology, or  height of some internal nodes, etc.
+\item \x{lnL(posterior)}: the logarithm of the posterior density of the current model parameters. It is this function
+  that the MCMC attempts to get samples from.
+\item \x{lnL(seq)}: the logarithm of the conditional probability of the sequence alignment given the current model
+  parameters.
+\item \x{lnL(times)}: the logarithm of the probability density of the phylogeny evaluated under the
+  birth and death branching process.
+\item \x{lnL(rates)}: the logarithm of the probability density of the relative substitution rates
+  along every edge of the current phylogeny.
+\item \x{birth}: sampled values of the birth parameter. Histogram of these values provide an
+  estimate of the marginal posterior distribution for this parameter.
+\item \x{death}: death parameter for the birth-death branching process.
+\item \x{clock}: mean rate of substitution.
+\item \x{root}: age of the root node. Note that ages in PhyTime are relative
+  to the present, i.e., an age of -100 corresponds to a time point 100 time units ago.
+\item \x{tstv}: transition/transversion ratio (the substitution model used
+  here is HKY, as selected in the \x{param.xml} file).
+\item \x{nu}: rate autocorrelation parameter.
+\item \x{rr0}, \x{rr1}, \x{rr2}, \x{pr0}, \x{pr1}, \x{pr2}: relative rate of substitution and the
+  corresponding frequencies. The mixture model of rate variation used in this analysis is the
+  FreeRate model \cite{soubrier12} with three rate classes. These  columns give the values of
+  these six parameters (though there are only four free parameters) sampled from the target
+  (posterior) distribution.  
+\item \x{t(calib:CAL1\_clade:CLADE1)}: sampled age of the MRCA of \x{CLADE1} when calibration
+  \x{CAL1} applies to this particular node.
+\item \x{t(calib:CAL1\_clade:CLADE2)}: sampled age of the MRCA of \x{CLADE2} when calibration
+  \x{CAL1} applies to this node.
+\item \x{t(calib:CAL2\_clade:CLADE3)}: sampled age of the MRCA of \x{CLADE3} when calibration
+  \x{CAL2} applies to this node.
+\item \x{clade(calib:CAL1)}: the clade id (\x{CLADE1} or \x{CLADE2}) calibration \x{CAL1} applies
+  to.
+\item \x{clade(calib:CAL2)}: the clade id (\x{CLADE1} or \x{CLADE2}) calibration \x{CAL1} applies
+  to.
+\item \x{br0}, $\ldots$, \x{br41}: relative rate on all edges in the tree.
+\item \x{t22}, $\ldots$, \x{t42}: ages of all internal nodes.
+\item The remaining columns provides information about the acceptance rate of various operators in
+  the MCMC and the corresponding tuning parameters.
+\end{itemize}
+
+The script below can be copied and pasted into R in order to produce the plots in Figure
+\ref{fig:phytimetrace}. The two plots at the top left and center give the trace of the node age of
+the MRCA of \x{CLADE1} when calibration \x{CAL1} applies to it (left) and that of \x{CLADE2} when
+the same calibration applies to it (centre). The plot on the top right gives the clade (which of
+\x{CLADE1} or \x{CLADE2}) the calibration \x{CAL1} applies to. The analysis of these  plots
+clearly shows a correlation between the three traces. Indeed,  when \x{CAL1} applies to \x{CLADE1}, the
+ages of the MRCAs of \x{CLADE1} and \x{CLADE2} are pushed towards youngers ages. This behaviour
+makes good sense since the taxa making up \x{CLADE2} ({\em Gymno Juniperus} and {\em Gymno
+  Juniperus}) define a substet of those making up \x{CLADE1}
+({\em Gymno Juniperus}, {\em Gymno Juniperus} and {\em Gymno Cycas}). As a consequence, when
+\x{CAL1} applies to \x{CLADE2}, the MRCA of \x{CLADE1} is ``free'' to wander towards older values.
+
+\begin{Verbatim}[frame=single, label=R script to produce traces from the PhyTime statistics file, samepage=true, baselinestretch=0.5,
+  fontsize=\small, numbers=left]
+file=paste("./phyml/examples/phytime/",
+"small_example_phytime_stats.txt",sep="");
+d=read.table(file,header=T); 
+idx=floor(0.1*length(d$sample)):length(d$sample) 
+par(mfrow=c(2,3),mar=c(5,4,2,2)); 
+plot(d$sample[idx],d$t.calib.CAL1_clade.CLADE1.[idx],type="l",
+col="red",ylab="Time",xlab="Sample",main="Time CLADE1 under CAL1")
+plot(d$sample[idx],d$t.calib.CAL1_clade.CLADE2.[idx],type="l",
+col="red",ylab="Time",xlab="Sample",main="Time CLADE2 under CAL1")
+plot(d$sample[idx],d$clade.calib.CAL1.[idx],type="l",col="black",
+ylab="Clade",xlab="Sample",main="Sampled clade \n 
+(1->CLADE1, 2->CLADE2)") 
+plot(d$sample[idx],d$lnL.seq.[idx],type="l",col="orange",
+ylab="log(Probability)",xlab="Sample",main="Likelihood sequences")
+plot(d$sample[idx],d$lnL.posterior.[idx],type="l",col="orange",
+ylab="log(density)",xlab="Sample",main="Joint posterior") 
+plot(d$sample[idx],d$lnL.times.[idx],type="l",col="orange",
+ylab="log(density)",xlab="Sample",main="Likelihood branching 
+process")
+\end{Verbatim}
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=13.8cm]{./fig/mcmctrace}
+\end{center}
+\caption{{\bf Traces from the statistics output file produced by PhyTime.}} 
+\label{fig:phytimetrace}
+\end{figure}
 
 % Important  information is also  displayed on  the standard  output of  PhyTime (the  standard output
 % generally corresponds to the terminal window from  which PhyTime was launched).  The first column of

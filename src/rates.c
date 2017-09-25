@@ -34,7 +34,7 @@ phydbl RATES_Lk_Rates(t_tree *tree)
 
   if(isnan(tree->rates->c_lnL_rates))
     {
-      PhyML_Printf("\n== Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s')\n",__FILE__,__LINE__,__FUNCTION__);
       Exit("\n");
     }
 
@@ -54,8 +54,8 @@ void RATES_Lk_Rates_Pre(t_node *a, t_node *d, t_edge *b, t_tree *tree)
 
   if(d->anc != a)
     {
-      PhyML_Printf("\n== d=%d d->anc=%d a=%d root=%d",d->num,d->anc->num,a->num,tree->n_root->num);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. d=%d d->anc=%d a=%d root=%d",d->num,d->anc->num,a->num,tree->n_root->num);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -76,7 +76,7 @@ void RATES_Lk_Rates_Pre(t_node *a, t_node *d, t_edge *b, t_tree *tree)
 
   if(isnan(tree->rates->c_lnL_rates))
     {
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       MCMC_Print_Param(tree->mcmc,tree);
       Exit("\n");
     }
@@ -116,8 +116,8 @@ phydbl RATES_Lk_Change_One_Time(t_node *n, phydbl new_t, t_tree *tree)
 {  
   if(n == tree->n_root)
     {
-      PhyML_Printf("\n. Moving the time of the root t_node is not permitted.");
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Moving the time of the root t_node is not permitted.");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
   else
@@ -218,8 +218,8 @@ void RATES_Update_Triplet(t_node *n, t_tree *tree)
 	  }
 	case GUINDON :
 	  {
+	    PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	    Exit("\n. Not implemented yet.\n");
-	    PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	    break;
 	  }
 	default :
@@ -232,7 +232,7 @@ void RATES_Update_Triplet(t_node *n, t_tree *tree)
 
       if(isnan(log_dens) || isinf(FABS(log_dens)))
 	{
-	  PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	  MCMC_Print_Param(tree->mcmc,tree);
 	  Exit("\n");
 	}
@@ -304,78 +304,9 @@ phydbl RATES_Lk_Rates_Core(phydbl br_r_a, phydbl br_r_d, phydbl nd_r_a, phydbl n
     {
     case THORNE :
       {
-	int err;	
-
-	if(tree->rates->model_log_rates == YES)
-	  {
-
-	    br_r_d += logcr;
-	    br_r_a += logcr;
-	    min_r  += logcr;
-	    max_r  += logcr;
-
-	    sd   = SQRT(tree->rates->nu*dt_d);
-	    mean = br_r_a - .5*sd*sd;
-
-	    log_dens = Log_Dnorm_Trunc(br_r_d,mean,sd,min_r,max_r,&err);
-
-	    if(err)
-	      {
-		PhyML_Printf("\n. Run: %d",tree->mcmc->run);
-		PhyML_Printf("\n. br_r_d = %f br_r_a = %f dt_d = %f logcr = %f",br_r_d,br_r_a,dt_d,logcr);
-		PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
-		Exit("\n");
-	      }
-	  }
-	else
-	  {
-	    PhyML_Printf("\n. Not implemented yet.");
-	    PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
-	    Exit("\n");
-	  }
-
-	/* int err; */
-	/* phydbl cr; */
-	/* phydbl min_r, max_r; */
-
-	/* cr = tree->rates->clock_r; */
-	/* min_r = tree->rates->min_rate * cr; */
-	/* max_r = tree->rates->max_rate * cr; */
-
-	/* /\* !!!!!!!!!!!!1 *\/ */
-	/* br_r_d *= cr; */
-	/* br_r_a *= cr; */
-
-	/* err = NO; */
-	
-	/* /\* if(dt_d < 5.0) dt_d = 5.0; *\/ */
-
-	/* sd = SQRT(dt_d*tree->rates->nu); */
-
- 	/* /\* sd   = SQRT(dt_d*exp(tree->rates->nu)); *\/ */
-	/* /\* mean = log(br_r_a) - .5*sd*sd; *\/ */
-
-	/* if(tree->rates->model_log_rates == YES) */
-	/*   { */
-	/*     mean = br_r_a - .5*sd*sd; */
-	/*   } */
-	/* else */
-	/*   { */
-	/*     mean = br_r_a; */
-	/*   } */
-
-	/* log_dens = Log_Dnorm_Trunc(br_r_d,mean,sd,min_r,max_r,&err); */
-
-	/* if(err || isnan(log_dens) || isinf(log_dens)) */
-	/*   { */
-	/*     PhyML_Printf("\n. br_r_a=%f br_r_d=%f dt_d=%f nu=%G",br_r_a,br_r_d,dt_d,tree->rates->nu); */
-	/*     PhyML_Printf("\n. Run: %d",tree->mcmc->run); */
-	/*     PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__); */
-	/*     Exit("\n"); */
-	/*   } */
-
+        PhyML_Fprintf(stderr,"\n. Not implemented yet.");
+        assert(FALSE);            
 	break;
-
       }
     case GUINDON :
       {
@@ -396,36 +327,17 @@ phydbl RATES_Lk_Rates_Core(phydbl br_r_a, phydbl br_r_d, phydbl nd_r_a, phydbl n
 
 	if(err)
 	  {
-	    PhyML_Printf("\n. Run: %d",tree->mcmc->run);
-	    PhyML_Printf("\n. br_r_d=%f mean=%f sd=%f min_r=%f max_r=%f dt_d=%f",br_r_d,mean,sd,min_r,max_r,dt_d);
-	    PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	    PhyML_Fprintf(stderr,"\n. Run: %d",tree->mcmc->run);
+	    PhyML_Fprintf(stderr,"\n. br_r_d=%f mean=%f sd=%f min_r=%f max_r=%f dt_d=%f",br_r_d,mean,sd,min_r,max_r,dt_d);
+	    PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	    Exit("\n");
 	  }
 	break;
       }
     case GAMMA :
       {
-	if(tree->rates->model_log_rates == YES)
-	  {
-            /* log_dens = Dgamma(exp(br_r_d),1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)); */
-            /* log_dens /= */
-            /*   (Pgamma(exp(tree->rates->max_rate),1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)) - */
-            /*    Pgamma(exp(tree->rates->min_rate),1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2))); */
-          }
-        else
-	  {
-            /* log_dens = Dgamma(br_r_d,1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)); */
-            /* log_dens /= */
-            /*   (Pgamma(tree->rates->max_rate,1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)) - */
-            /*    Pgamma(tree->rates->min_rate,1./(tree->rates->nu*dt_d*POW(tree->rates->clock_r,2)),tree->rates->nu*dt_d*POW(tree->rates->clock_r,2))); */
-
-            int err;
-            /* log_dens = Log_Dnorm_Trunc(br_r_d,1.0,tree->rates->nu/tree->rates->clock_r,tree->rates->min_rate,tree->rates->max_rate,&err); */
-            log_dens = Log_Dnorm_Trunc(br_r_d,1.0,tree->rates->nu,tree->rates->min_rate,tree->rates->max_rate,&err);
-            /* log_dens = Log_Dnorm_Trunc(br_r_d,1.0,2.0,tree->rates->min_rate,tree->rates->max_rate,&err); */
-          }
-        
-	/* log_dens = log(log_dens); */
+        int err;
+        log_dens = Log_Dnorm_Trunc(br_r_d,1.0,tree->rates->nu,tree->rates->min_rate,tree->rates->max_rate,&err);
 	break;
       }
     case STRICTCLOCK :
@@ -436,18 +348,18 @@ phydbl RATES_Lk_Rates_Core(phydbl br_r_a, phydbl br_r_d, phydbl nd_r_a, phydbl n
 
     default : 
       {
-	PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+	PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	Warn_And_Exit("");
       }
     }
 
   if(isnan(log_dens))
     {
-      PhyML_Printf("\n== Run=%4d br_r_d=%f br_r_a=%f dt_d=%f dt_a=%f nu=%f log_dens=%G sd=%f mean=%f\n",
-		   tree->mcmc->run,
-		   br_r_d,br_r_a,dt_d,dt_a,tree->rates->nu,log_dens,
-		   sd,mean);
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Run=%4d br_r_d=%f br_r_a=%f dt_d=%f dt_a=%f nu=%f log_dens=%G sd=%f mean=%f\n",
+                    tree->mcmc->run,
+                    br_r_d,br_r_a,dt_d,dt_a,tree->rates->nu,log_dens,
+                    sd,mean);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -561,8 +473,8 @@ phydbl RATES_Compound_Core_Joint(phydbl mu1, phydbl mu2, int n1, int n2, phydbl 
 
   if(n1 < 0 || n2 < 0)
     {
-      PhyML_Printf("\n. n1=%d n2=%d",n1,n2);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. n1=%d n2=%d",n1,n2);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -570,7 +482,7 @@ phydbl RATES_Compound_Core_Joint(phydbl mu1, phydbl mu2, int n1, int n2, phydbl 
   
   if((n1 < 0) || (n2 < 0))
     {
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -681,8 +593,6 @@ void RATES_Copy_Rate_Struct(t_rate *from, t_rate *to, int n_otu)
   
   to->update_mean_l = from->update_mean_l;
   to->update_cov_l = from->update_cov_l;
-
-  to->model_log_rates = from->model_log_rates;
   
   to->nd_t_recorded = from->nd_t_recorded;
   to->br_r_recorded = from->br_r_recorded;
@@ -755,28 +665,11 @@ void RATES_Duplicate_Calib_Struct(t_tree *from, t_tree *to)
   int i,j;
 
   to->rates->n_cal = from->rates->n_cal;
-
   for(i=0;i<from->rates->n_cal;i++)
-    {      
-
-      to->rates->a_cal[i] = Make_Calibration();
-      Init_Calibration(to->rates->a_cal[i]);
-
-      to->rates->a_cal[i]->is_primary = from->rates->a_cal[i]->is_primary;
-      to->rates->a_cal[i]->n_target_tax = from->rates->a_cal[i]->n_target_tax;
-      to->rates->a_cal[i]->lower = from->rates->a_cal[i]->lower;
-      to->rates->a_cal[i]->upper = from->rates->a_cal[i]->upper;
-
-      to->rates->a_cal[i]->target_tax = (char **)mCalloc(to->rates->a_cal[i]->n_target_tax,sizeof(char *));
-      For(j,to->rates->a_cal[i]->n_target_tax) 
-        {
-          to->rates->a_cal[i]->target_tax[j] = (char *)mCalloc(strlen(from->rates->a_cal[i]->target_tax[j])+1,sizeof(char ));
-          strcpy(to->rates->a_cal[i]->target_tax[j],from->rates->a_cal[i]->target_tax[j]);
-        }
-
-      to->rates->a_cal[i]->target_tip = Make_Target_Tip(to->rates->a_cal[i]->n_target_tax);
-      Init_Target_Tip(to->rates->a_cal[i],to);
-
+    {
+      to->rates->a_cal[i] = Duplicate_Calib(from->rates->a_cal[i]);
+      for(j=0;j<from->rates->a_cal[i]->clade_list_size;j++)
+        Init_Target_Tip(to->rates->a_cal[i]->clade_list[j],to);
     }
 }
 
@@ -893,9 +786,9 @@ void RATES_Check_Node_Times_Pre(t_node *a, t_node *d, int *err, t_tree *tree)
 {
   if((tree->rates->nd_t[d->num] < tree->rates->nd_t[a->num]) || (FABS(tree->rates->nd_t[d->num] - tree->rates->nd_t[a->num]) < 1.E-20))
     {
-      PhyML_Printf("\n== a->t=%f d->t=%f",tree->rates->nd_t[a->num],tree->rates->nd_t[d->num]);
-      PhyML_Printf("\n== a->t_prior_min=%f a->t_prior_max=%f",tree->rates->t_prior_min[a->num],tree->rates->t_prior_max[a->num]);
-      PhyML_Printf("\n== d->t_prior_min=%f d->t_prior_max=%f",tree->rates->t_prior_min[d->num],tree->rates->t_prior_max[d->num]);
+      PhyML_Printf("\n. a->t=%f d->t=%f",tree->rates->nd_t[a->num],tree->rates->nd_t[d->num]);
+      PhyML_Printf("\n. a->t_prior_min=%f a->t_prior_max=%f",tree->rates->t_prior_min[a->num],tree->rates->t_prior_max[a->num]);
+      PhyML_Printf("\n. d->t_prior_min=%f d->t_prior_max=%f",tree->rates->t_prior_min[d->num],tree->rates->t_prior_max[d->num]);
       *err = YES;
     }
   if(d->tax) return;
@@ -945,8 +838,8 @@ void RATES_Bracket_N_Jumps(int *up, int *down, phydbl param)
   
   if(step == 1000)
     {
-      PhyML_Printf("\n. a=%f b=%f c=%f param=%f",a,b,c,param);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. a=%f b=%f c=%f param=%f",a,b,c,param);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
   *up = c;
@@ -1035,22 +928,22 @@ phydbl RATES_Dmu_One(phydbl mu, phydbl dt, phydbl a, phydbl b, phydbl lexp)
   
   if(dt < 0.0)
     {
-      PhyML_Printf("\n. dt=%f",dt);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. dt=%f",dt);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
   
   if(lexpdt < SMALL)
     {
-      PhyML_Printf("\n. lexpdt=%G lexp=%G dt=%G",lexpdt,lexp,dt);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. lexpdt=%G lexp=%G dt=%G",lexpdt,lexp,dt);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
   if(mu < 1.E-10)
     {
-      PhyML_Printf("\n. mu=%G",mu);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. mu=%G",mu);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");      
     }
   
@@ -1166,7 +1059,7 @@ void RATES_Expect_Number_Subst(phydbl t_beg, phydbl t_end, phydbl r_beg,  int *n
       }
     default:
       {
-	PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	Exit("\n. Model not implemented yet.\n");
 	break;
       }
@@ -1282,9 +1175,9 @@ void RATES_Set_Node_Times_Pre(t_node *a, t_node *d, t_tree *tree)
 
       if(t_sup > t_inf)
 	{
-	  PhyML_Printf("\n. t_sup = %f t_inf = %f",t_sup,t_inf);
-	  PhyML_Printf("\n. Run = %d",tree->mcmc->run);
-	  PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	  PhyML_Fprintf(stderr,"\n. t_sup = %f t_inf = %f",t_sup,t_inf);
+	  PhyML_Fprintf(stderr,"\n. Run = %d",tree->mcmc->run);
+	  PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	  Warn_And_Exit("");
 	}
             
@@ -1320,15 +1213,15 @@ phydbl RATES_Dmu1_And_Mu2_One_Jump_Two_Intervals(phydbl mu1, phydbl mu2, phydbl 
 
   if(mu2 < 1.E-10)
     {
-      PhyML_Printf("\n. mu2=%G",mu2);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. mu2=%G",mu2);
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
   if(mu1 < 1.E-10)
     {
-      PhyML_Printf("\n. mu2=%G",mu1);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. mu2=%G",mu1);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -1374,8 +1267,8 @@ phydbl RATES_Dmu1_Given_V_And_N(phydbl mu1, phydbl v, int n, phydbl dt1, phydbl 
 	  
 	  if(u < 1.E-10)
 	    {
-	      PhyML_Printf("\n. u = %G",u);
-	      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	      PhyML_Fprintf(stderr,"\n. u = %G",u);
+	      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	      Warn_And_Exit("");
 	    }
 	  
@@ -1387,8 +1280,8 @@ phydbl RATES_Dmu1_Given_V_And_N(phydbl mu1, phydbl v, int n, phydbl dt1, phydbl 
       u = (mu1 - lbda*v)/(1.-lbda);
       if(u < 1.E-10)
 	{
-	  PhyML_Printf("\n. mu1 = %f lambda = %f v = %f u = %G beg = %f end = %f",mu1,lbda,v,u,beg,end);
-	  PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	  PhyML_Fprintf(stderr,"\n. mu1 = %f lambda = %f v = %f u = %G beg = %f end = %f",mu1,lbda,v,u,beg,end);
+	  PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	  Warn_And_Exit("");
 	}
       
@@ -1398,8 +1291,8 @@ phydbl RATES_Dmu1_Given_V_And_N(phydbl mu1, phydbl v, int n, phydbl dt1, phydbl 
       u = (mu1 - lbda*v)/(1.-lbda);
       if(u < 1.E-10)
 	{
-	  PhyML_Printf("\n. u = %G",u);
-	  PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	  PhyML_Fprintf(stderr,"\n. u = %G",u);
+	  PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	  Warn_And_Exit("");
 	}
       
@@ -1448,9 +1341,9 @@ phydbl RATES_Dmu2_And_Mu1_Given_Min_N(phydbl mu1, phydbl mu2, phydbl dt1, phydbl
 
   if(density < 0.0)
     {
-      PhyML_Printf("\n. density=%f cmpoiss = %f i=%d n_min=%d mu1=%f mu2=%f dt1=%f dt2=%f",
+      PhyML_Fprintf(stderr,"\n. density=%f cmpoiss = %f i=%d n_min=%d mu1=%f mu2=%f dt1=%f dt2=%f",
 	     density,cumpoiss,i,n_min,mu1,mu2,dt1,dt2);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -1489,15 +1382,15 @@ phydbl RATES_Dmu2_And_Mu1_Given_N(phydbl mu1, phydbl mu2, phydbl dt1, phydbl dt2
 
 	if(mu2 < 1.E-10)
 	  {
-	    PhyML_Printf("\n. mu2=%f",mu2);
-	    PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	    PhyML_Fprintf(stderr,"\n. mu2=%f",mu2);
+	    PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	    Warn_And_Exit("");
 	  }
 
 	if(mu1 < 1.E-10)
 	  {
-	    PhyML_Printf("\n. mu1=%f",mu1);
-	    PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	    PhyML_Fprintf(stderr,"\n. mu1=%f",mu1);
+	    PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	    Warn_And_Exit("");
 	  }
 
@@ -1709,8 +1602,8 @@ void RATES_Posterior_One_Rate(t_node *a, t_node *d, int traversal, t_tree *tree)
 					tree->rates->u_cur_l[i],
 					tree->rates->mean_l[i],
 					tree->rates->nu,tree->rates->clock_r);
-      PhyML_Printf("\n. cel=%f cvl=%f\n",cel,cvl); 
-      PhyML_Printf("\n. Warning: invalid expected and/or std. dev. values. Skipping this step.\n"); 
+      PhyML_Fprintf(stderr,"\n. cel=%f cvl=%f\n",cel,cvl); 
+      PhyML_Fprintf(stderr,"\n. Warning: invalid expected and/or std. dev. values. Skipping this step.\n"); 
       Exit("\n");
     }
 
@@ -1719,17 +1612,8 @@ void RATES_Posterior_One_Rate(t_node *a, t_node *d, int traversal, t_tree *tree)
   /* like_mean = cel / (dt*cr*nf); */
   /* like_var  = cvl / POW(dt*cr*nf,2);  */
 
-  /* Model log of rates. Branch lengths are given in log units */
-  if(tree->rates->model_log_rates == YES) 
-    {      
-      like_mean = cel -    log(dt*cr*nf);
-      like_var  = cvl - 2.*log(dt*cr*nf);
-    }
-  else
-    {
-      like_mean = cel / (dt*cr*nf);
-      like_var  = cvl / POW(dt*cr*nf,2);
-    }
+  like_mean = cel / (dt*cr*nf);
+  like_var  = cvl / POW(dt*cr*nf,2);
   
   /* Prior */
   if(!d->tax)
@@ -1745,8 +1629,8 @@ void RATES_Posterior_One_Rate(t_node *a, t_node *d, int traversal, t_tree *tree)
   
   if(cvr < 0.0)
     {
-      PhyML_Printf("\n. cvr=%f d->tax=%d V1=%f v2=%f V3=%f",cvr,d->tax,V1,V2,V3);
-      PhyML_Printf("\n. T0=%f T1=%f T2=%f T3=%f",T0,T1,T2,T3);
+      PhyML_Fprintf(stderr,"\n. cvr=%f d->tax=%d V1=%f v2=%f V3=%f",cvr,d->tax,V1,V2,V3);
+      PhyML_Fprintf(stderr,"\n. T0=%f T1=%f T2=%f T3=%f",T0,T1,T2,T3);
       Exit("\n");
     }
 
@@ -1771,16 +1655,16 @@ void RATES_Posterior_One_Rate(t_node *a, t_node *d, int traversal, t_tree *tree)
 
   if(err || isnan(rd))
     {
-      PhyML_Printf("\n");
-      PhyML_Printf("\n. run: %d err=%d d->tax=%d",tree->mcmc->run,err,d->tax);
-      PhyML_Printf("\n. rd=%f cvr=%G dt=%G cr=%G",rd,cvr,dt,cr);
-      PhyML_Printf("\n. prior_mean = %G prior_var = %G",prior_mean,prior_var);
-      PhyML_Printf("\n. like_mean = %G like_var = %G",like_mean,like_var);
-      PhyML_Printf("\n. post_mean = %G post_var = %G",post_mean,post_var);
-      PhyML_Printf("\n. clock_r = %f",tree->rates->clock_r);
-      PhyML_Printf("\n. T0=%f T1=%f T2=%f T3=%f",T0,T1,T2,T3);
-      PhyML_Printf("\n. U0=%f U1=%f U2=%f U3=%f",U0,U1,U2,U3);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n");
+      PhyML_Fprintf(stderr,"\n. run: %d err=%d d->tax=%d",tree->mcmc->run,err,d->tax);
+      PhyML_Fprintf(stderr,"\n. rd=%f cvr=%G dt=%G cr=%G",rd,cvr,dt,cr);
+      PhyML_Fprintf(stderr,"\n. prior_mean = %G prior_var = %G",prior_mean,prior_var);
+      PhyML_Fprintf(stderr,"\n. like_mean = %G like_var = %G",like_mean,like_var);
+      PhyML_Fprintf(stderr,"\n. post_mean = %G post_var = %G",post_mean,post_var);
+      PhyML_Fprintf(stderr,"\n. clock_r = %f",tree->rates->clock_r);
+      PhyML_Fprintf(stderr,"\n. T0=%f T1=%f T2=%f T3=%f",T0,T1,T2,T3);
+      PhyML_Fprintf(stderr,"\n. U0=%f U1=%f U2=%f U3=%f",U0,U1,U2,U3);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }    
 
@@ -2030,8 +1914,8 @@ void RATES_Posterior_One_Time(t_node *a, t_node *d, int traversal, t_tree *tree)
 /*   cov22 = tree->rates->cov[b2->num*dim+b2->num]; */
 /*   cov33 = tree->rates->cov[b3->num*dim+b3->num]; */
 
-/*   PhyML_Printf("\n- El1=%10f El2=%10f El3=%10f",El1,El2,El3); */
-/*   PhyML_Printf("\n- cov11=%10f cov12=%10f cov13=%10f cov23=%10f cov22=%10f cov33=%10f", cov11,cov12,cov13,cov23,cov22,cov33); */
+/*   PhyML_Fprintf(stderr,"\n- El1=%10f El2=%10f El3=%10f",El1,El2,El3); */
+/*   PhyML_Fprintf(stderr,"\n- cov11=%10f cov12=%10f cov13=%10f cov23=%10f cov22=%10f cov33=%10f", cov11,cov12,cov13,cov23,cov22,cov33); */
 
   num_1 = num_2 = num_3 = -1;
   if(b1->num < b2->num && b2->num < b3->num) { num_1 = 0; num_2 = 1; num_3 = 2; }
@@ -2067,8 +1951,8 @@ void RATES_Posterior_One_Time(t_node *a, t_node *d, int traversal, t_tree *tree)
   El3 += tree->rates->mean_l[b3->num];
 
 
-/*   PhyML_Printf("\n+ El1=%10f El2=%10f El3=%10f",El1,El2,El3); */
-/*   PhyML_Printf("\n+ cov11=%10f cov12=%10f cov13=%10f cov23=%10f cov22=%10f cov33=%10f", cov11,cov12,cov13,cov23,cov22,cov33); */
+/*   PhyML_Fprintf(stderr,"\n+ El1=%10f El2=%10f El3=%10f",El1,El2,El3); */
+/*   PhyML_Fprintf(stderr,"\n+ cov11=%10f cov12=%10f cov13=%10f cov23=%10f cov22=%10f cov33=%10f", cov11,cov12,cov13,cov23,cov22,cov33); */
 
 
   t1_new = +1;
@@ -2081,7 +1965,7 @@ void RATES_Posterior_One_Time(t_node *a, t_node *d, int traversal, t_tree *tree)
 
   if(t_min > t_max) 
     {
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -2593,16 +2477,7 @@ void RATES_Update_Cur_Bl_Pre(t_node *a, t_node *d, t_edge *b, t_tree *tree)
 
       if(tree->rates->model == THORNE)
         {
-          if(tree->rates->model_log_rates == YES)
-            {
-              /* Artihmetic average */
-              rr = (exp(ra) + exp(rd))/2.;
-            }
-          else
-            {
-              rr = (ra+rd)/2.;
-            }
-          
+          rr = (ra+rd)/2.;          
           tree->rates->cur_l[d->num] = dt*rr*cr;
         }
       
@@ -2610,8 +2485,14 @@ void RATES_Update_Cur_Bl_Pre(t_node *a, t_node *d, t_edge *b, t_tree *tree)
 	{
 	  phydbl m,v;
 
-	  Integrated_Geometric_Brownian_Bridge_Moments(dt,ra,rd,nu,&m,&v);
-	  
+	  Integrated_Geometric_Brownian_Bridge_Moments(dt,log(ra),log(rd),nu,&m,&v);
+
+          if(m < 0.0 || v < 0.0)
+            {
+              PhyML_Fprintf(stderr,"\n. dt: %G ra: %G rd: %G nu: %G m: %G v: %G\n",dt,ra,rd,nu,&m,&v);
+              assert(FALSE);
+            }
+          
 	  m *= cr*dt; // the actual rate average is m * cr. We multiply by dt in order to derive the value for the branch length
 	  v *= (cr*cr)*(dt*dt);
 
@@ -2643,9 +2524,9 @@ void RATES_Update_Cur_Bl_Pre(t_node *a, t_node *d, t_edge *b, t_tree *tree)
       
       if(b && (isnan(b->l->v) || isnan(b->l_var->v)))
 	{
-	  PhyML_Printf("\n== dt=%G rr=%G cr=%G ra=%G rd=%G nu=%G %f %f ",dt,rr,cr,ra,rd,nu,b->l_var->v,b->l->v);	  
-	  PhyML_Printf("\n== ta=%G td=%G ra*cr=%G rd*cr=%G sd=%G",ta,td,ra*cr,rd*cr,SQRT(dt*nu)*cr);
-	  PhyML_Printf("\n== Err. in file %s at line %d (function '%s').\n",__FILE__,__LINE__,__FUNCTION__);
+	  PhyML_Fprintf(stderr,"\n. dt=%G rr=%G cr=%G ra=%G rd=%G nu=%G %f %f ",dt,rr,cr,ra,rd,nu,b->l_var->v,b->l->v);	  
+	  PhyML_Fprintf(stderr,"\n. ta=%G td=%G ra*cr=%G rd*cr=%G sd=%G",ta,td,ra*cr,rd*cr,SQRT(dt*nu)*cr);
+	  PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d (function '%s').\n",__FILE__,__LINE__,__FUNCTION__);
 	  Exit("\n");
 	}
     }
@@ -2850,7 +2731,7 @@ void RATES_Covariance_Mu(t_tree *tree)
 	    }
 	  else
 	    {
-	      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
 	      Exit("\n");
 	    }
 	}
@@ -3110,8 +2991,8 @@ phydbl RATES_Expected_Tree_Length(t_tree *tree)
 
   if(n != 2*tree->n_otu-2)
     {
-      PhyML_Printf("\n. n=%d 2n-2=%d",n,2*tree->n_otu-2);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. n=%d 2n-2=%d",n,2*tree->n_otu-2);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -3271,14 +3152,14 @@ phydbl RATES_Find_Max_Dt_Bisec(phydbl r, phydbl r_mean, phydbl ta, phydbl tc, ph
 
   if(tb < ori_ta)
     {
-      PhyML_Printf("\n. tb < ta r=%f r_mean=%f",r,r_mean);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. tb < ta r=%f r_mean=%f",r,r_mean);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
   if(tb > ori_tc)
     {
-      PhyML_Printf("\n. tb > tc r=%f r_mean=%f ori_ta=%f ori_tc=%f tb=%f",r,r_mean,ori_ta,ori_tc,tb);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. tb > tc r=%f r_mean=%f ori_ta=%f ori_tc=%f tb=%f",r,r_mean,ori_ta,ori_tc,tb);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -3331,14 +3212,14 @@ phydbl RATES_Find_Min_Dt_Bisec(phydbl r, phydbl r_mean, phydbl ta, phydbl tc, ph
 
   if(tb < ori_ta)
     {
-      PhyML_Printf("\n. tb < ta r=%f r_mean=%f",r,r_mean);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. tb < ta r=%f r_mean=%f",r,r_mean);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
   if(tb > ori_tc)
     {
-      PhyML_Printf("\n. tb > tc r=%f r_mean=%f ori_ta=%f ori_tc=%f tb=%f",r,r_mean,ori_ta,ori_tc,tb);
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. tb > tc r=%f r_mean=%f ori_ta=%f ori_tc=%f tb=%f",r,r_mean,ori_ta,ori_tc,tb);
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -3564,8 +3445,8 @@ void RATES_Record_Times(t_tree *mixt_tree)
     {
       if(tree->rates->nd_t_recorded == YES)
         {
-          PhyML_Printf("\n== Overwriting recorded times is forbidden.\n");
-          PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+          PhyML_Fprintf(stderr,"\n. Overwriting recorded times is forbidden.\n");
+          PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
           Exit("\n");
         }
 
@@ -3603,8 +3484,8 @@ void RATES_Record_Rates(t_tree *tree)
 
   if(tree->rates->br_r_recorded == YES)
     {
-      PhyML_Printf("\n. Overwriting recorded rates is forbidden.\n");
-      PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Overwriting recorded rates is forbidden.\n");
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Exit("\n");
     }
 
@@ -3640,21 +3521,12 @@ void RATES_Set_Clock_And_Nu_Max(t_tree *tree)
   if(tree->rates->model == THORNE || 
      tree->rates->model == GUINDON)
     {
-      tune = 1.05;
-      
-      if(tree->rates->model_log_rates == NO)
-	{
-	  r_max = log(tree->rates->max_rate);
-	}
-      else
-	{
-	  r_max = tree->rates->max_rate;
-	}
-      
+      tune  = 1.05;
+      r_max = tree->rates->max_rate;     
       l_max = tree->mod->l_max;
       
       min_t = .0;
-      For(i,2*tree->n_otu-1) if(tree->rates->t_prior_min[i] < min_t) min_t = tree->rates->t_prior_min[i];
+      for(i=0;i<2*tree->n_otu-1;++i) if(tree->rates->t_prior_min[i] < min_t) min_t = tree->rates->t_prior_min[i];
       
       dt = FABS(min_t);
       max_clock = l_max / dt; 
@@ -3800,7 +3672,7 @@ void RATES_Get_Mean_Rate_In_Subtree_Pre(t_node *a, t_node *d, phydbl *sum, int *
   else
     {
       int i;
-      for(i=0;i<3;i++)
+      for(i=0;i<3;++i)
 	{
 	  if(d->v[i] != a && d->b[i] != tree->e_root)
 	    {
@@ -3828,7 +3700,7 @@ char *RATES_Get_Model_Name(int model)
     case STRICTCLOCK : {strcpy(s,"clock"); break;}
     default : 
       {
-	PhyML_Printf("\n. Err in file %s at line %d\n",__FILE__,__LINE__);
+	PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
 	Exit("\n");
 	break;
      }

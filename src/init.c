@@ -600,7 +600,7 @@ void Set_Defaults_Input(option* io)
 
   MCMC_Init_MCMC_Struct(NULL,io,io->mcmc);
   RATES_Init_Rate_Struct(io->rates,NULL,-1);
-  io->rates->model               = GUINDON;
+  io->rates->model               = GAMMA;
 }
 
 //////////////////////////////////////////////////////////////
@@ -818,25 +818,6 @@ void RATES_Init_Rate_Struct(t_rate *rates, t_rate *existing_rates, int n_otu)
       rates->model = NONE;
     }
 
-
-  if(rates->model == NONE)
-    rates->model_log_rates = NO;
-  else if(rates->model == THORNE)
-    rates->model_log_rates = YES;
-  else if(rates->model == GUINDON)
-    rates->model_log_rates = YES;
-  else if(rates->model == GAMMA)
-    rates->model_log_rates = NO;
-  else if(rates->model == STRICTCLOCK)
-    rates->model_log_rates = NO;
-  else
-    {
-      PhyML_Printf("\n== Please initialize model properly.");
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
-      Warn_And_Exit("");
-    }
-
-
   rates->met_within_gibbs = NO;
   rates->c_lnL_rates      = UNLIKELY;
   rates->c_lnL_times      = UNLIKELY;
@@ -859,21 +840,8 @@ void RATES_Init_Rate_Struct(t_rate *rates, t_rate *existing_rates, int n_otu)
   rates->death_rate_max   = 1.E+0;
   rates->death_rate_pivot = 1.E-1;
 
-  if(rates->model_log_rates == YES)
-    {
-      rates->max_rate  =  log(10.);
-      rates->min_rate  = -log(10.);
-      /* rates->max_rate  =  MDBL_MAX; */
-      /* rates->min_rate  = -MDBL_MAX; */
-    }
-  else
-    {
-      rates->max_rate  = 100.0;
-      rates->min_rate  = 0.001;
-    }
-  /* rates->max_rate         = 6.0; */
-  /* rates->min_rate         = 0.0; */
-
+  rates->max_rate  = 100.0;
+  rates->min_rate  = 0.001;
 
   rates->clock_r       = 1.E-4;
   rates->min_clock     = 1.E-10;
@@ -885,7 +853,7 @@ void RATES_Init_Rate_Struct(t_rate *rates, t_rate *existing_rates, int n_otu)
 
   rates->nu            = 1.0E-1;
   rates->min_nu        = 0.0;
-  rates->max_nu        = 1.E+8;
+  rates->max_nu        = 2.0;
   
   /* rates->max_nu        = 2.0; */
 
@@ -909,9 +877,9 @@ void RATES_Init_Rate_Struct(t_rate *rates, t_rate *existing_rates, int n_otu)
 
   if(n_otu > 0)
     {
-      For(i,(2*n_otu-2)*(2*n_otu-2)) rates->cov_l[i] = 0.0;
+      for(i=0;i<(2*n_otu-2)*(2*n_otu-2);++i) rates->cov_l[i] = 0.0;
       
-      For(i,2*n_otu-2)
+      for(i=0;i<2*n_otu-2;++i)
         {
           rates->n_jps[i]  =  -1;
           rates->t_jps[i]  =  -1;
@@ -920,18 +888,10 @@ void RATES_Init_Rate_Struct(t_rate *rates, t_rate *existing_rates, int n_otu)
           rates->cur_l[i]  = 0.01;
         }
       
-      For(i,2*n_otu-1)
+      for(i=0;i<2*n_otu-1;++i)
         {
-          if(rates->model_log_rates == YES)
-            {
-              rates->nd_r[i]   = 0.0;
-              rates->br_r[i]   = 0.0;
-            }
-          else
-            {
-              rates->nd_r[i]   = 1.0;
-              rates->br_r[i]   = 1.0;
-            }
+          rates->nd_r[i]   = 1.0;
+          rates->br_r[i]   = 1.0;
           
           rates->mean_t[i] = 0.0;
           rates->nd_t[i]   = 0.0;
@@ -990,17 +950,17 @@ void Init_One_Spr(t_spr *a_spr)
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 
-void Init_Target_Tip(t_cal *cal, t_tree *tree)
+void Init_Target_Tip(t_clad *clade, t_tree *tree)
 {
   int i,j;
 
-  for(i=0;i<cal->n_target_tax;i++)
+  for(i=0;i<clade->n_tax;++i)
     {
-      for(j=0;j<tree->n_otu;j++)
+      for(j=0;j<tree->n_otu;++j)
         {
-          if(!strcmp(tree->a_nodes[j]->name,cal->target_tax[i]))
+          if(!strcmp(tree->a_nodes[j]->name,clade->tax_list[i]))
             {
-              cal->target_tip[i] = tree->a_nodes[j];
+              clade->tip_list[i] = tree->a_nodes[j];
               break;
             }
         }
@@ -1377,7 +1337,7 @@ void Init_Model(calign *data, t_mod *mod, option *io)
           For (i,mod->ns*mod->ns) mod->eigen->l_e_vect[i] = mod->eigen->r_e_vect[i];
           if(!Matinv(mod->eigen->l_e_vect,mod->eigen->size,mod->eigen->size,YES))
             {
-              PhyML_Printf("\n== Err in file %s at line %d.",__FILE__,__LINE__);
+              PhyML_Fprintf(stderr,"\n. Err in file %s at line %d.",__FILE__,__LINE__);
               Exit("\n");
             }
           
@@ -1386,8 +1346,8 @@ void Init_Model(calign *data, t_mod *mod, option *io)
         }
       else
         {
-          if (result==-1) PhyML_Printf("\n== Eigenvalues/vectors computation does not converge : computation cancelled");
-          else if (result==1) PhyML_Printf("\n== Complex eigenvalues/vectors : computation cancelled");
+          if (result==-1) PhyML_Printf("\n. Eigenvalues/vectors computation does not converge : computation cancelled");
+          else if (result==1) PhyML_Printf("\n. Complex eigenvalues/vectors : computation cancelled");
         }
     }
   else if(mod->io->datatype == GENERIC)
@@ -1402,8 +1362,8 @@ void Init_Model(calign *data, t_mod *mod, option *io)
     }
   else
     {
-      PhyML_Printf("\n== Datatype not recognized.\n");
-      PhyML_Printf("\n== Err. in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Datatype not recognized.\n");
+      PhyML_Fprintf(stderr,"\n. Err. in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -3413,8 +3373,8 @@ void M4_Init_Model(m4 *m4mod, calign *data, t_mod *mod)
   else if(mod->io->datatype == AA) m4mod->n_o = 20;
   else
     {
-      PhyML_Printf("\n== Not implemented yet.");
-      PhyML_Printf("\n== Err in file %s at line %d\n",__FILE__,__LINE__);
+      PhyML_Fprintf(stderr,"\n. Not implemented yet.");
+      PhyML_Fprintf(stderr,"\n. Err in file %s at line %d\n",__FILE__,__LINE__);
       Warn_And_Exit("");
     }
 
@@ -3613,15 +3573,16 @@ void MCMC_Init_MCMC_Struct(char *filename, option *io, t_mcmc *mcmc)
 //////////////////////////////////////////////////////////////
 
 void Init_Calibration(t_cal *cal)
-{
-  cal->target_nd  = NULL;
-  cal->next       = NULL;
-  cal->prev       = NULL;
-  cal->target_tax = NULL;
-  cal->target_tip = NULL;
-  cal->lower      = -1.;
-  cal->upper      = -1.;
-  cal->is_primary = FALSE;
+{  
+  cal->next             = NULL;
+  cal->prev             = NULL;
+  cal->lower            = -1.;
+  cal->upper            = -1.;
+  cal->is_primary       = FALSE;
+  cal->alpha_proba_list = NULL;
+  cal->clade_list       = NULL;
+  cal->clade_list_size  = 0;
+  cal->id               = NULL;
 }
 
 //////////////////////////////////////////////////////////////
